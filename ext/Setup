@@ -20,6 +20,7 @@
 #io/console
 #io/nonblock
 #io/wait
+isomorfeus-ferret
 #json
 #json/generator
 #json/parser

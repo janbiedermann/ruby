@@ -1,0 +1,8 @@
+require 'isomorfeus_ferret_ext'
+require 'isomorfeus/ferret/version'
+require 'isomorfeus/ferret/field_symbol'
+require 'isomorfeus/ferret/stdlib_patches'
+require 'isomorfeus/ferret/monitor'
+require 'isomorfeus/ferret/index/field_infos'
+require 'isomorfeus/ferret/index/index'
+require 'isomorfeus/ferret/document'
