@@ -40,9 +40,7 @@ static VALUE object_space;
 extern rb_encoding *utf8_encoding;
 extern int ruby_re_search(struct re_pattern_buffer *, const char *, int, int, int, struct re_registers *);
 
-int
-frb_rb_hash_size(VALUE hash)
-{
+int frb_rb_hash_size(VALUE hash) {
 #ifdef RHASH_SIZE
     return RHASH_SIZE(hash);
 #else
@@ -86,24 +84,32 @@ typedef struct RToken {
     int pos_inc;
 } RToken;
 
-static void
-frb_token_free(void *p)
-{
+static void frb_token_free(void *p) {
     free(p);
 }
 
-static void
-frb_token_mark(void *p)
-{
+static void frb_token_mark(void *p) {
     RToken *token = (RToken *)p;
     rb_gc_mark(token->text);
 }
 
-static VALUE
-frb_token_alloc(VALUE klass)
-{
-    return Data_Wrap_Struct(klass, &frb_token_mark, &frb_token_free,
-                            ALLOC(RToken));
+static size_t frb_token_size(const void *c) {
+    return sizeof(RToken);
+    (void)c;
+}
+
+const rb_data_type_t frb_rtoken_t = {
+    .wrap_struct_name = "FrbToken",
+    .function = {
+        .dmark = frb_token_mark,
+        .dfree = frb_token_free,
+        .dsize = frb_token_size
+    },
+    .data = NULL
+};
+
+static VALUE frb_token_alloc(VALUE klass) {
+    return TypedData_Wrap_Struct(klass, &frb_rtoken_t, ALLOC(RToken));
 }
 
 static VALUE get_token(FrtToken *tk)
@@ -115,21 +121,20 @@ static VALUE get_token(FrtToken *tk)
     token->start = tk->start;
     token->end = tk->end;
     token->pos_inc = tk->pos_inc;
-    return Data_Wrap_Struct(cToken, &frb_token_mark, &frb_token_free, token);
+    return TypedData_Wrap_Struct(cToken, &frb_rtoken_t, token);
 }
 
-FrtToken * frb_set_token(FrtToken *tk, VALUE rt)
-{
+FrtToken * frb_set_token(FrtToken *tk, VALUE rt) {
     RToken *rtk;
 
     if (rt == Qnil) return NULL;
 
-    Data_Get_Struct(rt, RToken, rtk);
+    TypedData_Get_Struct(rt, RToken, &frb_rtoken_t, rtk);
     frt_tk_set(tk, rs2s(rtk->text), RSTRING_LEN(rtk->text), rtk->start, rtk->end, rtk->pos_inc, rb_enc_get(rtk->text));
     return tk;
 }
 
-#define GET_TK(tk, self) Data_Get_Struct(self, RToken, tk)
+#define GET_TK(tk, self) TypedData_Get_Struct(self, RToken, &frb_rtoken_t, tk)
 
 /*
  *  call-seq:
