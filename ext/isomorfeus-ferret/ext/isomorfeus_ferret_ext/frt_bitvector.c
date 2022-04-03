@@ -1,8 +1,7 @@
 #include "frt_bitvector.h"
 #include <string.h>
 
-FrtBitVector *frt_bv_new_capa(int capa)
-{
+FrtBitVector *frt_bv_new_capa(int capa) {
     FrtBitVector *bv = FRT_ALLOC_AND_ZERO(FrtBitVector);
 
     /* The capacity passed by the user is number of bits allowed, however we
@@ -14,34 +13,29 @@ FrtBitVector *frt_bv_new_capa(int capa)
     return bv;
 }
 
-FrtBitVector *frt_bv_new()
-{
+FrtBitVector *frt_bv_new(void) {
     return frt_bv_new_capa(FRT_BV_INIT_CAPA);
 }
 
-void frt_bv_destroy(FrtBitVector *bv)
-{
+void frt_bv_destroy(FrtBitVector *bv) {
     if (--(bv->ref_cnt) == 0) {
         free(bv->bits);
         free(bv);
     }
 }
 
-void frt_bv_clear(FrtBitVector *bv)
-{
+void frt_bv_clear(FrtBitVector *bv) {
     memset(bv->bits, 0, bv->capa * sizeof(frt_u32));
     bv->extends_as_ones = 0;
     bv->count = 0;
     bv->size = 0;
 }
 
-void frt_bv_scan_reset(FrtBitVector *bv)
-{
+void frt_bv_scan_reset(FrtBitVector *bv) {
     bv->curr_bit = -1;
 }
 
-int frt_bv_eq(FrtBitVector *bv1, FrtBitVector *bv2)
-{
+int frt_bv_eq(FrtBitVector *bv1, FrtBitVector *bv2) {
     frt_u32 *bits, *bits2;
     int min_size, word_size, ext_word_size = 0, i;
     if (bv1 == bv2) {
@@ -65,8 +59,7 @@ int frt_bv_eq(FrtBitVector *bv1, FrtBitVector *bv2)
     if (bv1->size > min_size) {
         bits = bv1->bits;
         ext_word_size = FRT_TO_WORD(bv1->size);
-    }
-    else if (bv2->size > min_size) {
+    } else if (bv2->size > min_size) {
         bits = bv2->bits;
         ext_word_size = FRT_TO_WORD(bv2->size);
     }
@@ -81,8 +74,7 @@ int frt_bv_eq(FrtBitVector *bv1, FrtBitVector *bv2)
     return true;
 }
 
-unsigned long long frt_bv_hash(FrtBitVector *bv)
-{
+unsigned long long frt_bv_hash(FrtBitVector *bv) {
     unsigned long long hash = 0;
     const frt_u32 empty_word = bv->extends_as_ones ? 0xFFFFFFFF : 0;
     int i;

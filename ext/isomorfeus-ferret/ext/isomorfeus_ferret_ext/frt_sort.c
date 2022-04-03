@@ -3,6 +3,8 @@
 #include "frt_index.h"
 #include "frt_field_index.h"
 
+#undef close
+
 /***************************************************************************
  *
  * FrtSortField
@@ -716,7 +718,7 @@ bool frt_fdshq_lt(FrtFieldDoc *fd1, FrtFieldDoc *fd2) {
 
 #define SORT_INIT_SIZE 4
 
-FrtSort *frt_sort_new() {
+FrtSort *frt_sort_new(void) {
     FrtSort *self = FRT_ALLOC(FrtSort);
     self->size = 0;
     self->capa = SORT_INIT_SIZE;

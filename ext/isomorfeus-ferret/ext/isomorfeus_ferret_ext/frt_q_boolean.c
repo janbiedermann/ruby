@@ -820,9 +820,8 @@ static FrtExplanation *nmsc_explain(FrtScorer *self, int doc_num)
     return frt_expl_new(0.0, "No documents matched");
 }
 
-static FrtScorer *non_matching_scorer_new()
-{
-    FrtScorer *self    = frt_scorer_new(FrtScorer, NULL);
+static FrtScorer *non_matching_scorer_new(void) {
+    FrtScorer *self = frt_scorer_new(FrtScorer, NULL);
     self->score     = &nmsc_score;
     self->next      = &nmsc_next;
     self->skip_to   = &nmsc_skip_to;
@@ -836,26 +835,22 @@ static FrtScorer *non_matching_scorer_new()
  ***************************************************************************/
 
 #define BSc(scorer) ((BooleanScorer *)(scorer))
-typedef struct BooleanScorer
-{
-    FrtScorer          super;
-    FrtScorer        **required_scorers;
-    int             rs_cnt;
-    int             rs_capa;
-    FrtScorer        **optional_scorers;
-    int             os_cnt;
-    int             os_capa;
-    FrtScorer        **prohibited_scorers;
-    int             ps_cnt;
-    int             ps_capa;
-    FrtScorer         *counting_sum_scorer;
-    Coordinator    *coordinator;
+typedef struct BooleanScorer {
+    FrtScorer   super;
+    FrtScorer   **required_scorers;
+    int         rs_cnt;
+    int         rs_capa;
+    FrtScorer   **optional_scorers;
+    int         os_cnt;
+    int         os_capa;
+    FrtScorer   **prohibited_scorers;
+    int         ps_cnt;
+    int         ps_capa;
+    FrtScorer   *counting_sum_scorer;
+    Coordinator *coordinator;
 } BooleanScorer;
 
-static FrtScorer *counting_sum_scorer_create3(BooleanScorer *bsc,
-                                           FrtScorer *req_scorer,
-                                           FrtScorer *opt_scorer)
-{
+static FrtScorer *counting_sum_scorer_create3(BooleanScorer *bsc, FrtScorer *req_scorer, FrtScorer *opt_scorer) {
     if (bsc->ps_cnt == 0) {
         /* no prohibited */
         return req_opt_sum_scorer_new(req_scorer, opt_scorer);

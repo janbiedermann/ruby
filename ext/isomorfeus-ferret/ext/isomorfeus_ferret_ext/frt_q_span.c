@@ -4,6 +4,8 @@
 #include "frt_search.h"
 #include "frt_hashset.h"
 
+#undef close
+
 #define CLAUSE_INIT_CAPA 4
 
 /*****************************************************************************
@@ -1948,7 +1950,7 @@ FrtQuery *frt_spanoq_init(FrtQuery *self) {
     return self;
 }
 
-FrtQuery *frt_spanoq_new() {
+FrtQuery *frt_spanoq_new(void) {
     FrtQuery *self = frt_spanoq_alloc();
     return frt_spanoq_init(self);
 }

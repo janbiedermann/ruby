@@ -3,6 +3,9 @@
 #include "frt_search.h"
 #include "frt_helper.h"
 
+#undef close
+#undef read
+
 #define MTQ(query) ((FrtMultiTermQuery *)(query))
 
 /***************************************************************************
@@ -579,7 +582,7 @@ static FrtMatchVector *multi_tq_get_matchv_i(FrtQuery *self, FrtMatchVector *mv,
     return mv;
 }
 
-FrtQuery *frt_multi_tq_alloc() {
+FrtQuery *frt_multi_tq_alloc(void) {
     return frt_q_new(FrtMultiTermQuery);
 }
 

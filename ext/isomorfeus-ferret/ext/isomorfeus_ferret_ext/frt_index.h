@@ -223,8 +223,7 @@ extern void frt_sis_put(FrtSegmentInfos *sis, FILE *stream);
  *
  ****************************************************************************/
 
-typedef struct FrtTermInfo
-{
+typedef struct FrtTermInfo {
     int doc_freq;
     off_t frq_ptr;
     off_t prx_ptr;
@@ -239,24 +238,21 @@ typedef struct FrtTermInfo
 } while (0)
 
 /****************************************************************************
- *
  * FrtTermEnum
- *
  ****************************************************************************/
 
 typedef struct FrtTermEnum FrtTermEnum;
 
-struct FrtTermEnum
-{
+struct FrtTermEnum {
     char        curr_term[FRT_MAX_WORD_SIZE];
     char        prev_term[FRT_MAX_WORD_SIZE];
-    FrtTermInfo    curr_ti;
+    FrtTermInfo curr_ti;
     int         curr_term_len;
     int         field_num;
     FrtTermEnum *(*set_field)(FrtTermEnum *te, int field_num);
-    char     *(*next)(FrtTermEnum *te);
-    char     *(*skip_to)(FrtTermEnum *te, const char *term);
-    void      (*close)(FrtTermEnum *te);
+    char        *(*next)(FrtTermEnum *te);
+    char        *(*skip_to)(FrtTermEnum *te, const char *term);
+    void        (*close)(FrtTermEnum *te);
     FrtTermEnum *(*clone)(FrtTermEnum *te);
 };
 
@@ -264,59 +260,54 @@ char *frt_te_get_term(struct FrtTermEnum *te);
 FrtTermInfo *frt_te_get_ti(struct FrtTermEnum *te);
 
 /****************************************************************************
- *
  * FrtSegmentTermEnum
- *
  ****************************************************************************/
 
-/* * FrtSegmentTermIndex * */
+/* FrtSegmentTermIndex */
 
-typedef struct FrtSegmentTermIndex
-{
+typedef struct FrtSegmentTermIndex {
     off_t       index_ptr;
     off_t       ptr;
     int         index_cnt;
     int         size;
-    char      **index_terms;
-    int        *index_term_lens;
-    FrtTermInfo   *index_term_infos;
-    off_t      *index_ptrs;
+    char        **index_terms;
+    int         *index_term_lens;
+    FrtTermInfo *index_term_infos;
+    off_t       *index_ptrs;
 } FrtSegmentTermIndex;
 
-/* * FrtSegmentFieldIndex * */
+/* FrtSegmentFieldIndex */
 
-typedef struct FrtSegmentTermEnum FrtSegmentTermEnum;
-
-typedef struct FrtSegmentFieldIndex
-{
-    frt_mutex_t     mutex;
+typedef struct FrtSegmentFieldIndex {
+    frt_mutex_t mutex;
     int         skip_interval;
     int         index_interval;
     off_t       index_ptr;
-    FrtTermEnum   *index_te;
-    FrtHash  *field_dict;
+    FrtTermEnum *index_te;
+    FrtHash     *field_dict;
 } FrtSegmentFieldIndex;
 
-extern FrtSegmentFieldIndex *frt_sfi_open(FrtStore *store, const char *segment);
-extern void frt_sfi_close(FrtSegmentFieldIndex *sfi);
+/* FrtSegmentTermEnum */
 
+typedef struct FrtSegmentTermEnum FrtSegmentTermEnum;
 
-/* * FrtSegmentTermEnum * */
-struct FrtSegmentTermEnum
-{
-    FrtTermEnum    te;
-    FrtInStream   *is;
+struct FrtSegmentTermEnum {
+    FrtTermEnum te;
+    FrtInStream *is;
     int         size;
     int         pos;
     int         skip_interval;
     FrtSegmentFieldIndex *sfi;
 };
 
+extern FrtSegmentFieldIndex *frt_sfi_open(FrtStore *store, const char *segment);
+extern void frt_sfi_close(FrtSegmentFieldIndex *sfi);
+
 extern void frt_ste_close(FrtTermEnum *te);
 extern FrtTermEnum *frt_ste_clone(FrtTermEnum *te);
 extern FrtTermEnum *frt_ste_new(FrtInStream *is, FrtSegmentFieldIndex *sfi);
 
-/* * MultiTermEnum * */
+/* MultiTermEnum */
 
 extern FrtTermEnum *frt_mte_new(FrtMultiReader *mr, int field_num, const char *term);
 
@@ -326,17 +317,14 @@ extern FrtTermEnum *frt_mte_new(FrtMultiReader *mr, int field_num, const char *t
  *
  ****************************************************************************/
 
-typedef struct FrtTermInfosReader
-{
+typedef struct FrtTermInfosReader {
     frt_thread_key_t thread_te;
-    void       **te_bucket;
-    FrtTermEnum     *orig_te;
-    int          field_num;
+    void             **te_bucket;
+    FrtTermEnum      *orig_te;
+    int              field_num;
 } FrtTermInfosReader;
 
-extern FrtTermInfosReader *frt_tir_open(FrtStore *store,
-                                 FrtSegmentFieldIndex *sfi,
-                                 const char *segment);
+extern FrtTermInfosReader *frt_tir_open(FrtStore *store, FrtSegmentFieldIndex *sfi, const char *segment);
 extern FrtTermInfosReader *frt_tir_set_field(FrtTermInfosReader *tir, int field_num);
 extern FrtTermInfo *frt_tir_get_ti(FrtTermInfosReader *tir, const char *term);
 extern char *frt_tir_get_term(FrtTermInfosReader *tir, int pos);
@@ -351,34 +339,26 @@ extern void frt_tir_close(FrtTermInfosReader *tir);
 #define FRT_INDEX_INTERVAL 128
 #define FRT_SKIP_INTERVAL 16
 
-typedef struct FrtTermWriter
-{
-    int counter;
-    const char *last_term;
-    FrtTermInfo last_term_info;
+typedef struct FrtTermWriter {
+    int          counter;
+    const char   *last_term;
+    FrtTermInfo  last_term_info;
     FrtOutStream *os;
 } FrtTermWriter;
 
-typedef struct FrtTermInfosWriter
-{
-    int field_count;
-    int index_interval;
-    int skip_interval;
-    off_t last_index_ptr;
-    FrtOutStream *tfx_out;
+typedef struct FrtTermInfosWriter {
+    int           field_count;
+    int           index_interval;
+    int           skip_interval;
+    off_t         last_index_ptr;
+    FrtOutStream  *tfx_out;
     FrtTermWriter *tix_writer;
     FrtTermWriter *tis_writer;
 } FrtTermInfosWriter;
 
-extern FrtTermInfosWriter *frt_tiw_open(FrtStore *store,
-                                 const char *segment,
-                                 int index_interval,
-                                 int skip_interval);
+extern FrtTermInfosWriter *frt_tiw_open(FrtStore *store, const char *segment, int index_interval, int skip_interval);
 extern void frt_tiw_start_field(FrtTermInfosWriter *tiw, int field_num);
-extern void frt_tiw_add(FrtTermInfosWriter *tiw,
-                    const char *term,
-                    int t_len,
-                    FrtTermInfo *ti);
+extern void frt_tiw_add(FrtTermInfosWriter *tiw, const char *term, int t_len, FrtTermInfo *ti);
 extern void frt_tiw_close(FrtTermInfosWriter *tiw);
 
 /****************************************************************************
@@ -388,8 +368,7 @@ extern void frt_tiw_close(FrtTermInfosWriter *tiw);
  ****************************************************************************/
 
 typedef struct FrtTermDocEnum FrtTermDocEnum;
-struct FrtTermDocEnum
-{
+struct FrtTermDocEnum {
     void (*seek)(FrtTermDocEnum *tde, int field_num, const char *term);
     void (*seek_te)(FrtTermDocEnum *tde, FrtTermEnum *te);
     void (*seek_ti)(FrtTermDocEnum *tde, FrtTermInfo *ti);
@@ -405,8 +384,7 @@ struct FrtTermDocEnum
 /* * FrtSegmentTermDocEnum * */
 
 typedef struct FrtSegmentTermDocEnum FrtSegmentTermDocEnum;
-struct FrtSegmentTermDocEnum
-{
+struct FrtSegmentTermDocEnum {
     FrtTermDocEnum tde;
     void (*seek_prox)(FrtSegmentTermDocEnum *stde, off_t prx_ptr);
     void (*skip_prox)(FrtSegmentTermDocEnum *stde);
@@ -452,8 +430,7 @@ extern FrtTermDocEnum *frt_mtdpe_new(FrtIndexReader *ir, int field_num, char **t
  *
  ****************************************************************************/
 
-typedef struct FrtOffset
-{
+typedef struct FrtOffset {
     off_t start;
     off_t end;
 } FrtOffset;
@@ -464,8 +441,7 @@ typedef struct FrtOffset
  *
  ****************************************************************************/
 
-typedef struct FrtOccurence
-{
+typedef struct FrtOccurence {
     struct FrtOccurence *next;
     int pos;
 } FrtOccurence;
@@ -476,8 +452,7 @@ typedef struct FrtOccurence
  *
  ****************************************************************************/
 
-typedef struct FrtPosting
-{
+typedef struct FrtPosting {
     int freq;
     int doc_num;
     FrtOccurence *first_occ;
@@ -492,8 +467,7 @@ extern FrtPosting *frt_p_new(FrtMemoryPool *mp, int doc_num, int pos);
  *
  ****************************************************************************/
 
-typedef struct FrtPostingList
-{
+typedef struct FrtPostingList {
     const char *term;
     int term_len;
     FrtPosting *first;
@@ -501,8 +475,7 @@ typedef struct FrtPostingList
     FrtOccurence *last_occ;
 } FrtPostingList;
 
-extern FrtPostingList *frt_pl_new(FrtMemoryPool *mp, const char *term,
-                           int term_len, FrtPosting *p);
+extern FrtPostingList *frt_pl_new(FrtMemoryPool *mp, const char *term, int term_len, FrtPosting *p);
 extern void frt_pl_add_occ(FrtMemoryPool *mp, FrtPostingList *pl, int pos);
 extern int frt_pl_cmp(const FrtPostingList **pl1, const FrtPostingList **pl2);
 
@@ -512,8 +485,7 @@ extern int frt_pl_cmp(const FrtPostingList **pl1, const FrtPostingList **pl2);
  *
  ****************************************************************************/
 
-typedef struct FrtTVField
-{
+typedef struct FrtTVField {
     int field_num;
     int size;
 } FrtTVField;
@@ -524,8 +496,7 @@ typedef struct FrtTVField
  *
  ****************************************************************************/
 
-typedef struct FrtTVTerm
-{
+typedef struct FrtTVTerm {
     char   *text;
     int     freq;
     int    *positions;

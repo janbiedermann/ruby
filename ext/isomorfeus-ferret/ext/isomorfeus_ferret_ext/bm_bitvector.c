@@ -9,55 +9,51 @@
 
 static FrtBitVector *bv;
 
-static void setup()
-{
+static void setup(void) {
     bv = frt_bv_new_capa(SCAN_SIZE);
 }
 
-static void teardown()
-{
+static void teardown(void) {
     frt_bv_destroy(bv);
 }
 
-static void ferret_bv_and_sparse()
-{
+static void ferret_bv_and_sparse(void) {
     FrtBitVector * _bv = frt_bv_and(bv, bv);
     free(_bv);
 }
-static void ferret_bv_or_sparse()
-{
+
+static void ferret_bv_or_sparse(void) {
     FrtBitVector * _bv = frt_bv_or(bv, bv);
     free(_bv);
 }
-static void ferret_bv_xor_sparse()
-{
+
+static void ferret_bv_xor_sparse(void) {
     FrtBitVector * _bv = frt_bv_xor(bv, bv);
     free(_bv);
 }
-static void ferret_bv_not_sparse()
-{
+
+static void ferret_bv_not_sparse(void) {
     FrtBitVector * _bv = frt_bv_not(bv);
     free(_bv);
 }
-static void ferret_bv_and_dense()
-{
+
+static void ferret_bv_and_dense(void) {
     ferret_bv_and_sparse();
 }
-static void ferret_bv_or_dense()
-{
+
+static void ferret_bv_or_dense(void) {
     ferret_bv_or_sparse();
 }
-static void ferret_bv_xor_dense()
-{
+
+static void ferret_bv_xor_dense(void) {
     ferret_bv_xor_sparse();
 }
-static void ferret_bv_not_dense()
-{
+
+static void ferret_bv_not_dense(void) {
     ferret_bv_not_sparse();
 }
 
-static void ferret_bv_set_sparse()
-{
+static void ferret_bv_set_sparse(void) {
     int i;
 
     for (i = SCAN_INC; i < SCAN_SIZE; i += SCAN_INC) {
@@ -67,8 +63,7 @@ static void ferret_bv_set_sparse()
     }
 }
 
-static void ferret_bv_scan_sparse()
-{
+static void ferret_bv_scan_sparse(void) {
     int i, j;
 
     for (i = 0; i < N; i++) {
@@ -80,8 +75,7 @@ static void ferret_bv_scan_sparse()
     }
 }
 
-static void ferret_bv_set_dense()
-{
+static void ferret_bv_set_dense(void) {
     int i;
     frt_bv_clear(bv);
     for (i = 0; i < DENSE_SCAN_SIZE; i++) {
@@ -89,8 +83,7 @@ static void ferret_bv_set_dense()
     }
 }
 
-static void ferret_bv_scan_dense()
-{
+static void ferret_bv_scan_dense(void) {
     int i, j;
 
     for (i = 0; i < N; i++) {
@@ -102,8 +95,7 @@ static void ferret_bv_scan_dense()
     }
 }
 
-BENCH(bitvector_implementations)
-{
+BENCH(bitvector_implementations) {
     BM_SETUP(setup);
 
     BM_ADD(ferret_bv_set_sparse);

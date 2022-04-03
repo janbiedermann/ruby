@@ -9,10 +9,9 @@
 
 #define MASc(scorer) ((MatchAllScorer *)(scorer))
 
-typedef struct MatchAllScorer
-{
-    FrtScorer          super;
-    FrtIndexReader    *ir;
+typedef struct MatchAllScorer {
+    FrtScorer       super;
+    FrtIndexReader  *ir;
     int             max_doc;
     float           score;
 } MatchAllScorer;
@@ -146,7 +145,7 @@ FrtQuery *frt_maq_init(FrtQuery *self) {
     return self;
 }
 
-FrtQuery *frt_maq_new() {
+FrtQuery *frt_maq_new(void) {
     FrtQuery *self = frt_maq_alloc();
     return frt_maq_init(self);
 }

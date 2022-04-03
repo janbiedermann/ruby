@@ -529,7 +529,7 @@ static void frb_mulmap_free(void *p) {
     frt_mulmap_destroy((FrtMultiMapper *)p);
 }
 
-static size_t frb_mulmap_size() {
+static size_t frb_mulmap_size(const void *p) {
     return sizeof(FrtMultiMapper);
     (void)p;
 }

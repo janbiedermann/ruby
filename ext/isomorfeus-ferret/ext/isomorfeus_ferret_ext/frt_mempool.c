@@ -16,8 +16,7 @@ FrtMemoryPool *frt_mp_new_capa(int chuck_size, int init_buf_capa)
     return mp;
 }
 
-FrtMemoryPool *frt_mp_new()
-{
+FrtMemoryPool *frt_mp_new(void) {
     return frt_mp_new_capa(FRT_MP_BUF_SIZE, FRT_MP_INIT_CAPA);
 }
 

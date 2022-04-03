@@ -758,7 +758,7 @@ static FrtTokenStream *rets_clone_i(FrtTokenStream *orig_ts) {
     return ts;
 }
 
-FrtTokenStream *rets_alloc() {
+FrtTokenStream *rets_alloc(void) {
     return (FrtTokenStream *)frt_ecalloc(sizeof(RegExpTokenStream));
 }
 
@@ -1565,8 +1565,7 @@ const rb_data_type_t frb_reg_exp_analyzer_t = {
         .dmark = frb_re_analyzer_mark,
         .dfree = frb_analyzer_free,
         .dsize = frb_analyzer_size
-    },
-    .data = NULL
+    }
 };
 
 static VALUE frb_reg_exp_analyzer_alloc(VALUE rclass) {
@@ -1584,9 +1583,7 @@ static VALUE frb_reg_exp_analyzer_alloc(VALUE rclass) {
  *  reg_exp:: the token matcher for the tokenizer to use
  *  lower::   set to false if you don't want to downcase the tokens
  */
-static VALUE
-frb_re_analyzer_init(int argc, VALUE *argv, VALUE self)
-{
+static VALUE frb_re_analyzer_init(int argc, VALUE *argv, VALUE self) {
     VALUE lower, rets, regex, proc;
     FrtAnalyzer *a;
     FrtTokenStream *ts;

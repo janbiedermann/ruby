@@ -7,8 +7,7 @@
  *
  ****************************************************************************/
 
-FrtDocField *frt_df_new(FrtSymbol name)
-{
+FrtDocField *frt_df_new(FrtSymbol name) {
     FrtDocField *df = FRT_ALLOC(FrtDocField);
     df->name = name;
     df->size = 0;
@@ -21,8 +20,7 @@ FrtDocField *frt_df_new(FrtSymbol name)
     return df;
 }
 
-FrtDocField *frt_df_add_data_len(FrtDocField *df, char *data, int len, rb_encoding *encoding)
-{
+FrtDocField *frt_df_add_data_len(FrtDocField *df, char *data, int len, rb_encoding *encoding) {
     if (df->size >= df->capa) {
         df->capa <<= 2;
         FRT_REALLOC_N(df->data, char *, df->capa);
@@ -36,13 +34,11 @@ FrtDocField *frt_df_add_data_len(FrtDocField *df, char *data, int len, rb_encodi
     return df;
 }
 
-FrtDocField *frt_df_add_data(FrtDocField *df, char *data, rb_encoding *encoding)
-{
+FrtDocField *frt_df_add_data(FrtDocField *df, char *data, rb_encoding *encoding) {
     return frt_df_add_data_len(df, data, strlen(data), encoding);
 }
 
-void frt_df_destroy(FrtDocField *df)
-{
+void frt_df_destroy(FrtDocField *df) {
     if (df->destroy_data) {
         int i;
         for (i = 0; i < df->size; i++) {
@@ -60,8 +56,7 @@ void frt_df_destroy(FrtDocField *df)
  *        for more items : name: ["data", "data", "data"]
  * internally used for testing, thus encoding can be ignored
  */
-char *frt_df_to_s(FrtDocField *df)
-{
+char *frt_df_to_s(FrtDocField *df) {
     const char *df_name = rb_id2name(df->name);
     int i, len = 0, namelen = strlen(df_name);
     char *str, *s;
@@ -99,8 +94,7 @@ char *frt_df_to_s(FrtDocField *df)
  *
  ****************************************************************************/
 
-FrtDocument *frt_doc_new()
-{
+FrtDocument *frt_doc_new(void) {
     FrtDocument *doc = FRT_ALLOC(FrtDocument);
     doc->field_dict = frt_h_new_ptr((frt_free_ft)&frt_df_destroy);
     doc->size = 0;
@@ -110,8 +104,7 @@ FrtDocument *frt_doc_new()
     return doc;
 }
 
-FrtDocField *frt_doc_add_field(FrtDocument *doc, FrtDocField *df)
-{
+FrtDocField *frt_doc_add_field(FrtDocument *doc, FrtDocField *df) {
     if (!frt_h_set_safe(doc->field_dict, (void *)df->name, df)) {
         FRT_RAISE(FRT_EXCEPTION, "tried to add %s field which alread existed\n",
               rb_id2name(df->name));
@@ -125,13 +118,11 @@ FrtDocField *frt_doc_add_field(FrtDocument *doc, FrtDocField *df)
     return df;
 }
 
-FrtDocField *frt_doc_get_field(FrtDocument *doc, FrtSymbol name)
-{
+FrtDocField *frt_doc_get_field(FrtDocument *doc, FrtSymbol name) {
     return (FrtDocField *)frt_h_get(doc->field_dict, (void *)name);
 }
 
-void frt_doc_destroy(FrtDocument *doc)
-{
+void frt_doc_destroy(FrtDocument *doc) {
     frt_h_destroy(doc->field_dict);
     free(doc->fields);
     free(doc);

@@ -9,6 +9,9 @@
 #include "brotli_decode.h"
 #include "brotli_encode.h"
 
+#undef close
+#undef read
+
 extern void frt_micro_sleep(const int micro_seconds);
 
 #define GET_LOCK(lock, name, store, err_msg) do {\
@@ -103,29 +106,22 @@ static frt_u64 str36_to_u64(char *p)
  * @param ext extension of the filename (including .)
  * @param gen generation
  */
-char *frt_fn_for_generation(char *buf,
-                        const char *base,
-                        const char *ext,
-                        frt_i64 gen)
-{
+char *frt_fn_for_generation(char *buf, const char *base, const char *ext, frt_i64 gen) {
     if (-1 == gen) {
         return NULL;
-    }
-    else {
+    } else {
         char b[FRT_SEGMENT_NAME_MAX_LENGTH];
         char *u = u64_to_str36(b, FRT_SEGMENT_NAME_MAX_LENGTH, (frt_u64)gen);
         if (ext == NULL) {
             sprintf(buf, "%s_%s", base, u);
-        }
-        else {
+        } else {
             sprintf(buf, "%s_%s.%s", base, u, ext);
         }
         return buf;
     }
 }
 
-static char *segfn_for_generation(char *buf, frt_u64 generation)
-{
+static char *segfn_for_generation(char *buf, frt_u64 generation) {
     char b[FRT_SEGMENT_NAME_MAX_LENGTH];
     char *u = u64_to_str36(b, FRT_SEGMENT_NAME_MAX_LENGTH, generation);
     sprintf(buf, FRT_SEGMENTS_FILE_NAME"_%s", u);
@@ -203,8 +199,7 @@ FrtCacheObject *frt_co_create(FrtHash *ref_tab1, FrtHash *ref_tab2,
     return self;
 }
 
-FrtHash *frt_co_hash_create()
-{
+FrtHash *frt_co_hash_create(void) {
     return frt_h_new(&co_hash, &co_eq, (frt_free_ft)NULL, (frt_free_ft)&co_destroy);
 }
 
@@ -279,7 +274,7 @@ static void fi_check_params(int store, int index, int term_vector)
     }
 }
 
-FrtFieldInfo *frt_fi_alloc() {
+FrtFieldInfo *frt_fi_alloc(void) {
     return FRT_ALLOC(FrtFieldInfo);
 }
 
@@ -337,7 +332,7 @@ char *frt_fi_to_s(FrtFieldInfo *fi)
  *
  ****************************************************************************/
 
-FrtFieldInfos *frt_fis_alloc() {
+FrtFieldInfos *frt_fis_alloc(void) {
     return FRT_ALLOC(FrtFieldInfos);
 }
 
@@ -1183,8 +1178,7 @@ static void lazy_df_destroy(FrtLazyDocField *self)
     free(self);
 }
 
-static void comp_raise()
-{
+static void comp_raise(void) {
     FRT_RAISE(EXCEPTION, "Compression error");
 }
 
@@ -2106,8 +2100,7 @@ static char *ste_scan_to(FrtTermEnum *te, const char *term)
     }
 }
 
-static FrtSegmentTermEnum *ste_allocate()
-{
+static FrtSegmentTermEnum *ste_allocate(void) {
     FrtSegmentTermEnum *ste = FRT_ALLOC_AND_ZERO(FrtSegmentTermEnum);
 
     TE(ste)->next = &ste_next;
@@ -2131,7 +2124,6 @@ void frt_ste_close(FrtTermEnum *te)
     frt_is_close(STE(te)->is);
     free(te);
 }
-
 
 static char *frt_ste_get_term(FrtTermEnum *te, int pos)
 {
@@ -3345,8 +3337,8 @@ FrtTermDocEnum *frt_mtdpe_new(FrtIndexReader *ir, int field_num, char **terms, i
  ****************************************************************************/
 
 static FrtHash *fn_extensions = NULL;
-static void file_name_filter_init()
-{
+
+static void file_name_filter_init(void) {
     int i;
     fn_extensions = frt_h_new_str((frt_free_ft)NULL, (frt_free_ft)NULL);
     for (i = 0; i < FRT_NELEMS(INDEX_EXTENSIONS); i++) {
@@ -4369,7 +4361,7 @@ static FrtIndexReader *sr_setup_i(FrtSegmentReader *sr)
     return ir;
 }
 
-FrtSegmentReader *frt_sr_alloc() {
+FrtSegmentReader *frt_sr_alloc(void) {
     return FRT_ALLOC_AND_ZERO(FrtSegmentReader);
 }
 
@@ -4652,7 +4644,7 @@ static void mr_close_i(FrtIndexReader *ir)
     free(MR(ir)->starts);
 }
 
-FrtMultiReader *frt_mr_alloc() {
+FrtMultiReader *frt_mr_alloc(void) {
     return FRT_ALLOC_AND_ZERO(FrtMultiReader);
 }
 
@@ -5895,15 +5887,12 @@ static void iw_commit_compound_file(FrtIndexWriter *iw, FrtSegmentInfo *si)
     iw_create_compound_file(iw->store, iw->fis, si, cfs_name, iw->deleter);
 }
 
-static void iw_merge_segments(FrtIndexWriter *iw, const int min_seg,
-                              const int max_seg)
-{
+static void iw_merge_segments(FrtIndexWriter *iw, const int min_seg, const int max_seg) {
     int i;
     FrtSegmentInfos *sis = iw->sis;
     FrtSegmentInfo *si = frt_sis_new_segment(sis, 0, iw->store);
 
-    SegmentMerger *merger = sm_create(iw, si, &sis->segs[min_seg],
-                                      max_seg - min_seg);
+    SegmentMerger *merger = sm_create(iw, si, &sis->segs[min_seg], max_seg - min_seg);
 
     /* This is where all the action happens. */
     si->doc_cnt = sm_merge(merger);
@@ -6129,7 +6118,7 @@ void frt_iw_close(FrtIndexWriter *iw)
     free(iw);
 }
 
-FrtIndexWriter *frt_iw_alloc() {
+FrtIndexWriter *frt_iw_alloc(void) {
     return FRT_ALLOC_AND_ZERO(FrtIndexWriter);
 }
 

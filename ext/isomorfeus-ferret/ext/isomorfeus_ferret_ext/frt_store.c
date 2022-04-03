@@ -59,7 +59,7 @@ static void frt_close_lock_i(FrtLock *lock)
 /**
  * Create a store struct initializing the mutex.
  */
-FrtStore *frt_store_alloc() {
+FrtStore *frt_store_alloc(void) {
     return FRT_ALLOC(FrtStore);
 }
 
@@ -71,7 +71,7 @@ FrtStore *frt_store_init(FrtStore *store) {
     return store;
 }
 
-FrtStore *frt_store_new() {
+FrtStore *frt_store_new(void) {
     FrtStore *store = frt_store_alloc();
     return frt_store_init(store);
 }
@@ -94,8 +94,7 @@ void frt_store_destroy(FrtStore *store)
  *
  * @return a newly allocated and initialized OutStream object
  */
-FrtOutStream *frt_os_new()
-{
+FrtOutStream *frt_os_new(void) {
     FrtOutStream *os = FRT_ALLOC(FrtOutStream);
     os->buf.start = 0;
     os->buf.pos = 0;
@@ -187,8 +186,7 @@ void frt_os_write_bytes(FrtOutStream *os, const frt_uchar *buf, int len)
  *
  * @return a newly allocated and initialized InStream
  */
-FrtInStream *frt_is_new()
-{
+FrtInStream *frt_is_new(void) {
     FrtInStream *is = FRT_ALLOC(FrtInStream);
     is->buf.start = 0;
     is->buf.pos = 0;

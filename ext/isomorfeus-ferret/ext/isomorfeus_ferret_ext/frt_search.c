@@ -3,6 +3,8 @@
 #include "frt_search.h"
 #include "frt_array.h"
 
+#undef close
+
 /***************************************************************************
  *
  * FrtExplanation - Used to give details for query scores
@@ -497,8 +499,7 @@ static int match_range_cmp(const void *p1, const void *p2)
 
 
 /* ** FrtMatchVector ** */
-FrtMatchVector *frt_matchv_new()
-{
+FrtMatchVector *frt_matchv_new(void) {
     FrtMatchVector *matchv = FRT_ALLOC(FrtMatchVector);
 
     matchv->size = 0;

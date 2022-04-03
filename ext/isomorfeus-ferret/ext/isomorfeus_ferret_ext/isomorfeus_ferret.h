@@ -69,9 +69,6 @@ extern char *json_concat_string(char *s, char *field);
 extern char *rs2s(VALUE rstr);
 extern char *rstrdup(VALUE rstr);
 
-#define Frt_Make_Struct(klass)\
-  rb_data_object_wrap(klass,NULL,(RUBY_DATA_FUNC)NULL,(RUBY_DATA_FUNC)NULL)
-
 #endif
 
 #define frb_mark_cclass(klass) rb_ivar_set(klass, id_cclass, Qtrue)

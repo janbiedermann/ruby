@@ -1,6 +1,8 @@
 #include <string.h>
 #include "frt_field_index.h"
 
+#undef close
+
 /***************************************************************************
  *
  * FrtFieldIndex

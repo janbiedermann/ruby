@@ -510,8 +510,7 @@ void frt_h_str_print_keys(FrtHash *self, FILE *out)
     free(keys);
 }
 
-void frt_hash_finalize()
-{
+void frt_hash_finalize(void) {
     while (num_free_hts > 0) {
         free(free_hts[--num_free_hts]);
     }

@@ -38,7 +38,7 @@ static void frb_qp_mark(void *p) {
     frb_gc_mark(((FrtQParser *)p)->analyzer);
 }
 
-const size_t frb_qp_size(const void *p) {
+static size_t frb_qp_size(const void *p) {
     return sizeof(FrtQParser);
     (void)p;
 }

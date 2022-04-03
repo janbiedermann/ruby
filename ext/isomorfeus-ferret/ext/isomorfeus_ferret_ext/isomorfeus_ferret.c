@@ -87,7 +87,7 @@ void frb_gc_mark(void *key) {
 }
 
 VALUE frb_data_alloc(VALUE klass) {
-    return Frt_Make_Struct(klass);
+    return rb_data_object_wrap(klass,NULL,(RUBY_DATA_FUNC)NULL,(RUBY_DATA_FUNC)NULL);
 }
 
 void frb_deref_free(void *p) {

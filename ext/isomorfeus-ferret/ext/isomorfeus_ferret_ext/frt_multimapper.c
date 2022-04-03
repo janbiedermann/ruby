@@ -99,8 +99,7 @@ static int ndstate_is_match(FrtState *self, char **mapping)
     return 0;
 }
 
-static NonDeterministicState *ndstate_new()
-{
+static NonDeterministicState *ndstate_new(void) {
     NonDeterministicState *self = FRT_ALLOC_AND_ZERO(NonDeterministicState);
     St(self)->next              = (int (*)(FrtState *, int, int *))&ndstate_next;
     St(self)->destroy_i         = (void (*)(FrtState *))&ndstate_destroy_i;
@@ -108,8 +107,7 @@ static NonDeterministicState *ndstate_new()
     return self;
 }
 
-FrtMultiMapper *frt_mulmap_new()
-{
+FrtMultiMapper *frt_mulmap_new(void) {
     FrtMultiMapper *self = FRT_ALLOC_AND_ZERO(FrtMultiMapper);
     self->capa = 128;
     self->mappings = FRT_ALLOC_N(FrtMapping *, 128);

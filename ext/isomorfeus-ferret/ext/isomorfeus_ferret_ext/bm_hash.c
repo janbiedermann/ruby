@@ -4,8 +4,7 @@
 
 #define N 20
 
-static void ferret_hash()
-{
+static void ferret_hash(void) {
     int i;
     void *res = NULL;
     for (i = 0; i < N; i++) {
@@ -24,13 +23,11 @@ static void ferret_hash()
     (void)res;
 }
 
-BENCH(hash_implementations)
-{
+BENCH(hash_implementations) {
     BM_ADD(ferret_hash);
 }
 
-static void standard_hash()
-{
+static void standard_hash(void) {
     int i;
     void *res = NULL;
     for (i = 0; i < N; i++) {
@@ -49,8 +46,7 @@ static void standard_hash()
 
 #define PERTURB_SHIFT 5
 static const char *dummy_key = "";
-static FrtHashEntry *h_lookup_str(FrtHash *ht, register const void *key)
-{
+static FrtHashEntry *h_lookup_str(FrtHash *ht, register const void *key) {
     register const unsigned long hash = frt_str_hash((const char *)key);
     register unsigned int perturb;
     register int mask = ht->mask;
@@ -95,8 +91,7 @@ static FrtHashEntry *h_lookup_str(FrtHash *ht, register const void *key)
     }
 }
 
-static void string_hash()
-{
+static void string_hash(void) {
     int i;
     void *res = NULL;
     for (i = 0; i < N; i++) {
@@ -114,8 +109,7 @@ static void string_hash()
     (void)res;
 }
 
-BENCH(specialized_string_hash)
-{
+BENCH(specialized_string_hash) {
     BM_ADD(standard_hash);
     BM_ADD(string_hash);
 }

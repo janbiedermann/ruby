@@ -232,7 +232,7 @@ static const struct FrtOutStreamMethods RAM_OUT_STREAM_METHODS = {
     ramo_close_i
 };
 
-FrtOutStream *frt_ram_new_buffer() {
+FrtOutStream *frt_ram_new_buffer(void) {
     FrtRAMFile *rf = rf_new("");
     FrtOutStream *os = frt_os_new();
 

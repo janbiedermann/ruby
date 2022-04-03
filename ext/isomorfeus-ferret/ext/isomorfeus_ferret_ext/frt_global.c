@@ -29,18 +29,15 @@ OnigCodePoint cp_at;
 OnigCodePoint cp_ampersand;
 OnigCodePoint cp_colon;
 
-int frt_scmp(const void *p1, const void *p2)
-{
+int frt_scmp(const void *p1, const void *p2) {
     return strcmp(*(char **) p1, *(char **) p2);
 }
 
-void frt_strsort(char **str_array, int size)
-{
+void frt_strsort(char **str_array, int size) {
     qsort(str_array, size, sizeof(char *), &frt_scmp);
 }
 
-int frt_icmp(const void *p1, const void *p2)
-{
+int frt_icmp(const void *p1, const void *p2) {
     int i1 = *(int *) p1;
     int i2 = *(int *) p2;
 
@@ -53,42 +50,36 @@ int frt_icmp(const void *p1, const void *p2)
     return 0;
 }
 
-int frt_icmp_risky(const void *p1, const void *p2)
-{
+int frt_icmp_risky(const void *p1, const void *p2) {
   return (*(int *)p1) - *((int *)p2);
 }
 
-unsigned int *frt_imalloc(unsigned int value)
-{
+unsigned int *frt_imalloc(unsigned int value) {
   unsigned int *p = FRT_ALLOC(unsigned int);
   *p = value;
   return p;
 }
 
-unsigned long *frt_lmalloc(unsigned long value)
-{
+unsigned long *frt_lmalloc(unsigned long value) {
   unsigned long *p = FRT_ALLOC(unsigned long);
   *p = value;
   return p;
 }
 
-frt_u32 *frt_u32malloc(frt_u32 value)
-{
+frt_u32 *frt_u32malloc(frt_u32 value) {
   frt_u32 *p = FRT_ALLOC(frt_u32);
   *p = value;
   return p;
 }
 
-frt_u64 *frt_u64malloc(frt_u64 value)
-{
+frt_u64 *frt_u64malloc(frt_u64 value) {
   frt_u64 *p = FRT_ALLOC(frt_u64);
   *p = value;
   return p;
 }
 
 /* concatenate two strings freeing the second */
-char *frt_estrcat(char *str1, char *str2)
-{
+char *frt_estrcat(char *str1, char *str2) {
     size_t len1 = strlen(str1);
     size_t len2 = strlen(str2);
     FRT_REALLOC_N(str1, char, len1 + len2 + 3);     /* leave room for <CR> */
@@ -98,8 +89,7 @@ char *frt_estrcat(char *str1, char *str2)
 }
 
 /* epstrdup: duplicate a string with a format, report if error */
-char *frt_epstrdup(const char *fmt, int len, ...)
-{
+char *frt_epstrdup(const char *fmt, int len, ...) {
     char *string;
     va_list args;
     len += (int) strlen(fmt);
@@ -113,8 +103,7 @@ char *frt_epstrdup(const char *fmt, int len, ...)
 }
 
 /* frt_estrdup: duplicate a string, report if error */
-char *frt_estrdup(const char *s)
-{
+char *frt_estrdup(const char *s) {
     char *t = FRT_ALLOC_N(char, strlen(s) + 1);
     strcpy(t, s);
     return t;
@@ -123,15 +112,13 @@ char *frt_estrdup(const char *s)
 /* Pretty print a float to the buffer. The buffer should have at least 32
  * bytes available.
  */
-char *frt_dbl_to_s(char *buf, double num)
-{
+char *frt_dbl_to_s(char *buf, double num) {
     char *p, *e;
 
 #ifdef FRT_IS_C99
     if (isinf(num)) {
         return frt_estrdup(num < 0 ? "-Infinity" : "Infinity");
-    }
-    else if (isnan(num)) {
+    } else if (isnan(num)) {
         return frt_estrdup("NaN");
     }
 #endif
@@ -169,8 +156,7 @@ char *frt_strapp(char *dst, const char *src) {
 }
 
 /* strfmt: like sprintf except that it allocates memory for the string */
-char *frt_vstrfmt(const char *fmt, va_list args)
-{
+char *frt_vstrfmt(const char *fmt, va_list args) {
     char *string;
     char *p = (char *) fmt, *q;
     int len = (int) strlen(fmt) + 1;
@@ -232,8 +218,7 @@ char *frt_vstrfmt(const char *fmt, va_list args)
     return string;
 }
 
-char *frt_strfmt(const char *fmt, ...)
-{
+char *frt_strfmt(const char *fmt, ...) {
     va_list args;
     char *str;
     va_start(args, fmt);
@@ -242,8 +227,7 @@ char *frt_strfmt(const char *fmt, ...)
     return str;
 }
 
-void frt_dummy_free(void *p)
-{
+void frt_dummy_free(void *p) {
     (void)p; /* suppress unused argument warning */
 }
 
@@ -251,8 +235,7 @@ void frt_dummy_free(void *p)
 #define CMD_BUF_SIZE (128 + FILENAME_MAX)
 /* need to declare this as it is masked by default in linux */
 
-static char *build_shell_command()
-{
+static char *build_shell_command(void) {
     int   pid = getpid();
     char *buf = FRT_ALLOC_N(char, CMD_BUF_SIZE);
     char *command =
@@ -267,8 +250,7 @@ static char *build_shell_command()
 /**
  * Call out to gdb to get our stacktrace.
  */
-char *frt_get_stacktrace()
-{
+char *frt_get_stacktrace(void) {
 #ifdef HAVE_GDB
     FILE *stream;
     char *gdb_filename = NULL, *buf = NULL, *stack = NULL;
@@ -303,8 +285,7 @@ char *frt_get_stacktrace()
 #endif
 }
 
-void frt_print_stacktrace()
-{
+void frt_print_stacktrace(void) {
     char *stack = frt_get_stacktrace();
 
     if (stack) {
@@ -315,8 +296,7 @@ void frt_print_stacktrace()
     }
 }
 
-typedef struct FreeMe
-{
+typedef struct FreeMe {
     void *p;
     frt_free_ft free_func;
 } FreeMe;
@@ -325,8 +305,7 @@ static FreeMe *free_mes = NULL;
 static int free_mes_size = 0;
 static int free_mes_capa = 0;
 
-void frt_register_for_cleanup(void *p, frt_free_ft free_func)
-{
+void frt_register_for_cleanup(void *p, frt_free_ft free_func) {
     FreeMe *free_me;
     if (free_mes_capa == 0) {
         free_mes_capa = 16;
@@ -345,18 +324,15 @@ void frt_register_for_cleanup(void *p, frt_free_ft free_func)
 static char name[MAX_PROG_NAME]; /* program name for error msgs */
 
 /* frt_setprogname: set stored name of program */
-void frt_setprogname(const char *str)
-{
+void frt_setprogname(const char *str) {
     strncpy(name, str, sizeof(name) - 1);
 }
 
-const char *frt_progname()
-{
+const char *frt_progname(void) {
     return name;
 }
 
-static const char *signal_to_string(int signum)
-{
+static const char *signal_to_string(int signum) {
     switch (signum)
     {
         case SIGILL:  return "SIGILL";
@@ -371,8 +347,7 @@ static const char *signal_to_string(int signum)
     return "Unknown Signal";
 }
 
-static void sighandler_crash(int signum)
-{
+static void sighandler_crash(int signum) {
     frt_print_stacktrace();
     FRT_XEXIT("Signal", "Exiting on signal %s (%d)", signal_to_string(signum), signum);
 }
@@ -381,8 +356,7 @@ static void sighandler_crash(int signum)
     signal(sig, handler);                  \
 } while(0)
 
-void frt_init(int argc, const char *const argv[])
-{
+void frt_init(int argc, const char *const argv[]) {
     if (argc > 0) {
         frt_setprogname(argv[0]);
     }
@@ -432,8 +406,7 @@ void frt_init(int argc, const char *const argv[])
 static bool p_switch = false;
 static bool p_switch_tmp = false;
 
-void p(const char *format, ...)
-{
+void p(const char *format, ...) {
     va_list args;
 
     if (!p_switch) return;
@@ -443,25 +416,21 @@ void p(const char *format, ...)
     va_end(args);
 }
 
-void p_on()
-{
+void p_on(void) {
     fprintf(stderr, "> > > > > STARTING PRINT\n");
     p_switch = true;
 }
 
-void p_off()
-{
+void p_off(void) {
     fprintf(stderr, "< < < < < STOPPING PRINT\n");
     p_switch = false;
 }
 
-void frt_p_pause()
-{
+void frt_p_pause(void) {
     p_switch_tmp = p_switch;
     p_switch = false;
 }
 
-void frt_p_resume()
-{
+void frt_p_resume(void) {
     p_switch = p_switch_tmp;
 }

@@ -3,8 +3,7 @@
 
 #define N 10
 
-static void do_strcmp()
-{
+static void do_strcmp(void) {
     const char **word;
     char buf[100];
     int res, i;
@@ -18,8 +17,7 @@ static void do_strcmp()
     (void)res;
 }
 
-static void do_strncmp()
-{
+static void do_strncmp(void) {
     const char **word;
     char buf[100];
     int res, i;
@@ -33,8 +31,7 @@ static void do_strncmp()
     (void)res;
 }
 
-BENCH(strcmp_when_length_is_known)
-{
+BENCH(strcmp_when_length_is_known) {
     BM_COUNT(6);
     BM_DISCARD(1);
     BM_ADD(do_strcmp);

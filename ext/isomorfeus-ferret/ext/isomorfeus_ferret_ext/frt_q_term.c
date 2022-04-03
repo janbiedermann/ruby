@@ -2,6 +2,9 @@
 #include <string.h>
 #include "frt_search.h"
 
+#undef close
+#undef read
+
 #define TQ(query) ((FrtTermQuery *)(query))
 #define TSc(scorer) ((TermScorer *)(scorer))
 

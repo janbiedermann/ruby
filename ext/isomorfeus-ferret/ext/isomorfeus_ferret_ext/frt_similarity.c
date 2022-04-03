@@ -136,8 +136,7 @@ static FrtSimilarity default_similarity = {
     &simdef_destroy
 };
 
-FrtSimilarity *frt_sim_create_default()
-{
+FrtSimilarity *frt_sim_create_default(void) {
     int i;
     if (!default_similarity.data) {
         for (i = 0; i < 256; i++) {

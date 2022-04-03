@@ -683,6 +683,11 @@ const rb_data_type_t frb_term_enum_t = {
     }
 };
 
+static VALUE frb_te_alloc(VALUE rclass) {
+    FrtTermEnum *te = FRT_ALLOC_AND_ZERO(FrtTermEnum);
+    return TypedData_Wrap_Struct(rclass, &frb_term_enum_t, te);
+}
+
 static VALUE frb_te_get_set_term(VALUE self, const char *term) {
     FrtTermEnum *te = (FrtTermEnum *)DATA_PTR(self);
     VALUE str = term ? rb_str_new(term, te->curr_term_len) : Qnil;
@@ -2984,12 +2989,11 @@ static void Init_FieldInfos(void) {
  *    end
  */
 static void
-Init_TermEnum(void)
-{
+Init_TermEnum(void) {
     id_term = rb_intern("@term");
 
     cTermEnum = rb_define_class_under(mIndex, "TermEnum", rb_cObject);
-    rb_define_alloc_func(cTermEnum, frb_data_alloc);
+    rb_define_alloc_func(cTermEnum, frb_te_alloc);
 
     rb_define_method(cTermEnum, "next?",    frb_te_next, 0);
     rb_define_method(cTermEnum, "term",     frb_te_term, 0);

@@ -124,7 +124,7 @@ void frt_tk_destroy(void *p) {
     free(p);
 }
 
-FrtToken *frt_tk_new() {
+FrtToken *frt_tk_new(void) {
     return FRT_ALLOC(FrtToken);
 }
 
@@ -177,7 +177,7 @@ static FrtTokenStream *cts_clone_i(FrtTokenStream *orig_ts) {
     return frt_ts_clone_size(orig_ts, sizeof(FrtCachedTokenStream));
 }
 
-static FrtTokenStream *frt_cts_alloc() {
+static FrtTokenStream *frt_cts_alloc(void) {
     return (FrtTokenStream *)frt_ecalloc(sizeof(FrtCachedTokenStream));
 }
 
@@ -188,7 +188,7 @@ static FrtTokenStream *frt_cts_init(FrtTokenStream *ts) {
     return ts;
 }
 
-static FrtTokenStream *frt_cts_new() {
+static FrtTokenStream *frt_cts_new(void) {
     FrtTokenStream *ts = frt_cts_alloc();
     return frt_cts_init(ts);
 }
@@ -211,7 +211,7 @@ static FrtToken *nt_next(FrtTokenStream *ts) {
     }
 }
 
-FrtTokenStream *frt_non_tokenizer_new() {
+FrtTokenStream *frt_non_tokenizer_new(void) {
     FrtTokenStream *ts = frt_cts_new();
     ts->next = &nt_next;
     return ts;
@@ -252,7 +252,7 @@ static FrtToken *wst_next(FrtTokenStream *ts)
     return frt_tk_set_ts(&(CTS(ts)->token), start, t, ts->text, 1, enc);
 }
 
-FrtTokenStream *frt_whitespace_tokenizer_alloc() {
+FrtTokenStream *frt_whitespace_tokenizer_alloc(void) {
     return frt_cts_alloc();
 }
 
@@ -303,7 +303,7 @@ static FrtToken *lt_next(FrtTokenStream *ts) {
     return frt_tk_set_ts(&(CTS(ts)->token), start, t, ts->text, 1, enc);
 }
 
-FrtTokenStream *frt_letter_tokenizer_alloc() {
+FrtTokenStream *frt_letter_tokenizer_alloc(void) {
     return frt_cts_alloc();
 }
 
@@ -664,7 +664,7 @@ static FrtTokenStream *std_ts_clone_i(FrtTokenStream *orig_ts) {
     return frt_ts_clone_size(orig_ts, sizeof(FrtStandardTokenizer));
 }
 
-FrtTokenStream *frt_standard_tokenizer_alloc() {
+FrtTokenStream *frt_standard_tokenizer_alloc(void) {
     return (FrtTokenStream *)frt_ecalloc(sizeof(FrtStandardTokenizer));
 }
 
@@ -761,7 +761,7 @@ static FrtToken *sf_next(FrtTokenStream *ts) {
     return tk;
 }
 
-FrtTokenStream *frt_stop_filter_alloc() {
+FrtTokenStream *frt_stop_filter_alloc(void) {
     return (FrtTokenStream *)frt_ecalloc(sizeof(FrtStopFilter));
 }
 
@@ -850,7 +850,7 @@ static FrtTokenStream *mf_reset(FrtTokenStream *ts, char *text, rb_encoding *enc
     return ts;
 }
 
-FrtTokenStream *frt_mapping_filter_alloc() {
+FrtTokenStream *frt_mapping_filter_alloc(void) {
     return (FrtTokenStream *)frt_ecalloc(sizeof(FrtMappingFilter));
 }
 
@@ -955,7 +955,7 @@ static FrtToken *hf_next(FrtTokenStream *ts) {
     return tk;
 }
 
-FrtTokenStream *frt_hyphen_filter_alloc() {
+FrtTokenStream *frt_hyphen_filter_alloc(void) {
     return (FrtTokenStream *)frt_ecalloc(sizeof(FrtHyphenFilter));
 }
 
@@ -996,7 +996,7 @@ static FrtToken *lcf_next(FrtTokenStream *ts) {
     return tk;
 }
 
-FrtTokenStream *frt_lowercase_filter_alloc() {
+FrtTokenStream *frt_lowercase_filter_alloc(void) {
     return (FrtTokenStream *)frt_ecalloc(sizeof(FrtTokenFilter));
 }
 
@@ -1055,7 +1055,7 @@ static FrtTokenStream *stemf_clone_i(FrtTokenStream *orig_ts) {
     return new_ts;
 }
 
-FrtTokenStream *frt_stem_filter_alloc() {
+FrtTokenStream *frt_stem_filter_alloc(void) {
     return (FrtTokenStream *)frt_ecalloc(sizeof(FrtStemFilter));
 }
 
@@ -1111,7 +1111,7 @@ static FrtTokenStream *a_standard_get_ts(FrtAnalyzer *a, FrtSymbol field, char *
     return ts->reset(ts, text, encoding);
 }
 
-FrtAnalyzer *frt_analyzer_alloc() {
+FrtAnalyzer *frt_analyzer_alloc(void) {
     return (FrtAnalyzer *) FRT_ALLOC(FrtAnalyzer);
 }
 
@@ -1134,7 +1134,7 @@ FrtAnalyzer *frt_analyzer_new(FrtTokenStream *ts, void (*destroy_i)(FrtAnalyzer 
 /*** FrtNonAnalyzer **********************************************************/
 /*****************************************************************************/
 
-FrtAnalyzer *frt_non_analyzer_new() {
+FrtAnalyzer *frt_non_analyzer_new(void) {
     return frt_analyzer_new(frt_non_tokenizer_new(), NULL, NULL);
 }
 
@@ -1142,7 +1142,7 @@ FrtAnalyzer *frt_non_analyzer_new() {
 /*** FrtWhiteSpaceAnalyzer ***************************************************/
 /*****************************************************************************/
 
-FrtAnalyzer *frt_whitespace_analyzer_alloc() {
+FrtAnalyzer *frt_whitespace_analyzer_alloc(void) {
     return frt_analyzer_alloc();
 }
 
@@ -1161,7 +1161,7 @@ FrtAnalyzer *frt_whitespace_analyzer_new(bool lowercase) {
 /*** FrtLetterAnalyzer *******************************************************/
 /*****************************************************************************/
 
-FrtAnalyzer *frt_letter_analyzer_alloc() {
+FrtAnalyzer *frt_letter_analyzer_alloc(void) {
     return frt_analyzer_alloc();
 }
 
@@ -1180,7 +1180,7 @@ FrtAnalyzer *frt_letter_analyzer_new(bool lowercase) {
 /*** FrtStandardAnalyzer *****************************************************/
 /*****************************************************************************/
 
-FrtAnalyzer *frt_standard_analyzer_alloc() {
+FrtAnalyzer *frt_standard_analyzer_alloc(void) {
     return frt_analyzer_alloc();
 }
 
@@ -1227,7 +1227,7 @@ void frt_pfa_add_field(FrtAnalyzer *self, FrtSymbol field, FrtAnalyzer *analyzer
     frt_h_set(PFA(self)->dict, (void *)field, analyzer);
 }
 
-FrtAnalyzer *frt_per_field_analyzer_alloc() {
+FrtAnalyzer *frt_per_field_analyzer_alloc(void) {
     return (FrtAnalyzer *)frt_ecalloc(sizeof(FrtPerFieldAnalyzer));
 }
 
