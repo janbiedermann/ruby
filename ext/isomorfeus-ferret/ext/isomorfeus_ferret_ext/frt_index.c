@@ -1331,21 +1331,17 @@ static void lazy_doc_add_field(FrtLazyDoc *self, FrtLazyDocField *lazy_df, int i
     lazy_df->doc = self;
 }
 
-FrtLazyDocField *frt_lazy_doc_get(FrtLazyDoc *self, FrtSymbol field)
-{
+FrtLazyDocField *frt_lazy_doc_get(FrtLazyDoc *self, FrtSymbol field) {
     return (FrtLazyDocField *)frt_h_get(self->field_dictionary, (void *)field);
 }
 
 /****************************************************************************
- *
  * FrtFieldsReader
- *
  ****************************************************************************/
 
 #define FIELDS_IDX_PTR_SIZE 12
 
-FrtFieldsReader *frt_fr_open(FrtStore *store, const char *segment, FrtFieldInfos *fis)
-{
+FrtFieldsReader *frt_fr_open(FrtStore *store, const char *segment, FrtFieldInfos *fis) {
     FrtFieldsReader *fr = FRT_ALLOC(FrtFieldsReader);
     FrtInStream *fdx_in;
     char file_name[FRT_SEGMENT_NAME_MAX_LENGTH];
@@ -1365,8 +1361,7 @@ FrtFieldsReader *frt_fr_open(FrtStore *store, const char *segment, FrtFieldInfos
     return fr;
 }
 
-FrtFieldsReader *frt_fr_clone(FrtFieldsReader *orig)
-{
+FrtFieldsReader *frt_fr_clone(FrtFieldsReader *orig) {
     FrtFieldsReader *fr = FRT_ALLOC(FrtFieldsReader);
 
     memcpy(fr, orig, sizeof(FrtFieldsReader));
@@ -1376,8 +1371,7 @@ FrtFieldsReader *frt_fr_clone(FrtFieldsReader *orig)
     return fr;
 }
 
-void frt_fr_close(FrtFieldsReader *fr)
-{
+void frt_fr_close(FrtFieldsReader *fr) {
     frt_is_close(fr->fdt_in);
     frt_is_close(fr->fdx_in);
     free(fr);

@@ -58,7 +58,6 @@ extern void object_set2(void *key, VALUE obj, const char *file, int line);
 extern void object_del2(void *key, const char *file, int line);
 extern void frb_gc_mark(void *key);
 extern VALUE object_get(void *key);
-extern VALUE frb_data_alloc(VALUE klass);
 extern void frb_deref_free(void *p);
 extern void frb_create_dir(VALUE rpath);
 extern VALUE frb_hs_to_rb_ary(FrtHashSet *hs);

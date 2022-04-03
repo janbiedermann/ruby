@@ -1,8 +1,7 @@
 #include "frt_except.h"
 #include "test.h"
 
-static void raise_eof()
-{
+static void raise_eof(void) {
     FRT_RAISE(FRT_EOF_ERROR, "Error, end of file");
 }
 

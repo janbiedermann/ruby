@@ -3,6 +3,8 @@
 #include <limits.h>
 #include "test.h"
 
+#undef rename
+
 #define TEST_LOCK_NAME "test"
 
 typedef struct WithLockTestArg {

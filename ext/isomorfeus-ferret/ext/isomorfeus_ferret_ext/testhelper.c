@@ -555,7 +555,6 @@ char *num_to_str(int num)
     return res;
 }
 
-FILE *temp_open()
-{
+FILE *temp_open(void) {
     return fopen("test/testdir/tmp", "w+");
 }

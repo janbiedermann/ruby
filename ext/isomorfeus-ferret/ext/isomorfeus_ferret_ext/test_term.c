@@ -1,6 +1,8 @@
 #include "frt_index.h"
 #include "test.h"
 
+#undef close
+
 /***************************************************************************
  *
  * FrtTermInfosWriter

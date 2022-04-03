@@ -2,10 +2,12 @@
 #include "testhelper.h"
 #include "test.h"
 
+#undef close
+#undef read
+
 static FrtSymbol body, title, text, author, year, changing_field, compressed_field, tag;
 
-static FrtFieldInfos *prep_all_fis()
-{
+static FrtFieldInfos *prep_all_fis(void) {
     FrtFieldInfos *fis = frt_fis_new(FRT_STORE_NO, FRT_INDEX_YES, FRT_TERM_VECTOR_NO);
     frt_fis_add_field(fis, frt_fi_new(rb_intern("tv"), FRT_STORE_NO, FRT_INDEX_YES, FRT_TERM_VECTOR_YES));
     frt_fis_add_field(fis, frt_fi_new(rb_intern("tv un-t"), FRT_STORE_NO, FRT_INDEX_UNTOKENIZED,
@@ -27,8 +29,7 @@ static void destroy_docs(FrtDocument **docs, int len)
   free(docs);
 }
 
-static FrtFieldInfos *prep_book_fis()
-{
+static FrtFieldInfos *prep_book_fis(void) {
     FrtFieldInfos *fis = frt_fis_new(FRT_STORE_YES, FRT_INDEX_YES,
                               FRT_TERM_VECTOR_WITH_POSITIONS_OFFSETS);
     frt_fis_add_field(fis, frt_fi_new(rb_intern("year"), FRT_STORE_YES, FRT_INDEX_NO, FRT_TERM_VECTOR_NO));
@@ -36,8 +37,7 @@ static FrtFieldInfos *prep_book_fis()
 
 }
 
-FrtDocument *prep_book()
-{
+FrtDocument *prep_book(void) {
     FrtDocument *doc = frt_doc_new();
     rb_encoding *enc = rb_enc_find("ASCII-8BIT");
 
@@ -51,8 +51,7 @@ FrtDocument *prep_book()
 }
 
 #define BOOK_LIST_LENGTH 37
-FrtDocument **prep_book_list()
-{
+FrtDocument **prep_book_list(void) {
     rb_encoding *enc = rb_enc_find("ASCII-8BIT");
     FrtDocument **docs = FRT_ALLOC_N(FrtDocument *, BOOK_LIST_LENGTH);
     docs[0] = frt_doc_new();
@@ -340,8 +339,7 @@ static FrtIndexWriter *create_book_iw(FrtStore *store)
 
 #define IR_TEST_DOC_CNT 256
 
-FrtDocument **prep_ir_test_docs()
-{
+FrtDocument **prep_ir_test_docs(void) {
     int i;
     char buf[2000] = "";
     FrtDocument **docs = FRT_ALLOC_N(FrtDocument *, IR_TEST_DOC_CNT);

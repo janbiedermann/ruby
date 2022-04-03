@@ -33,8 +33,7 @@ static void test_posting(TestCase *tc, void *data)
     Apnull(pl->last_occ->next);
 }
 
-static FrtFieldInfos *create_tv_fis()
-{
+static FrtFieldInfos *create_tv_fis(void) {
     FrtFieldInfos *fis = frt_fis_new(FRT_STORE_NO, FRT_INDEX_UNTOKENIZED, FRT_TERM_VECTOR_NO);
     frt_fis_add_field(fis, frt_fi_new(rb_intern("tv"), FRT_STORE_NO, FRT_INDEX_UNTOKENIZED, FRT_TERM_VECTOR_YES));
     frt_fis_add_field(fis, frt_fi_new(rb_intern("tv2"), FRT_STORE_NO, FRT_INDEX_UNTOKENIZED, FRT_TERM_VECTOR_YES));

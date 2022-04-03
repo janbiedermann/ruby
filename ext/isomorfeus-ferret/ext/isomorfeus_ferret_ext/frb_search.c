@@ -3103,6 +3103,11 @@ const rb_data_type_t frb_explanation_t = {
     }
 };
 
+static VALUE frb_expl_alloc(VALUE rclass) {
+    FrtExplanation *e = FRT_ALLOC(FrtExplanation);
+    return TypedData_Wrap_Struct(rclass, &frb_explanation_t, e);
+}
+
 static VALUE frb_sea_explain(VALUE self, VALUE rquery, VALUE rdoc_id) {
     GET_SEA();
     FrtQuery *query = DATA_PTR(rquery);
@@ -3513,7 +3518,7 @@ static void Init_TopDocs(void) {
  */
 static void Init_Explanation(void) {
     cExplanation = rb_define_class_under(mSearch, "Explanation", rb_cObject);
-    rb_define_alloc_func(cExplanation, frb_data_alloc);
+    rb_define_alloc_func(cExplanation, frb_expl_alloc);
 
     rb_define_method(cExplanation, "to_s", frb_expl_to_s, 0);
     rb_define_method(cExplanation, "to_html", frb_expl_to_html, 0);
@@ -4374,7 +4379,7 @@ static void Init_Filter(void) {
     id_bits = rb_intern("bits");
     cFilter = rb_define_class_under(mSearch, "Filter", rb_cObject);
     frb_mark_cclass(cFilter);
-    rb_define_alloc_func(cConstantScoreQuery, frb_data_alloc);
+    rb_define_alloc_func(cConstantScoreQuery, frb_csq_alloc);
 
     rb_define_method(cFilter, "bits", frb_f_get_bits, 1);
     rb_define_method(cFilter, "to_s", frb_f_to_s, 0);

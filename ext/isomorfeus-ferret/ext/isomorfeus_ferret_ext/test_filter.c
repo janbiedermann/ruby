@@ -2,6 +2,8 @@
 #include "frt_search.h"
 #include "test.h"
 
+#undef close
+
 #define FILTER_DOCS_SIZE 10
 #define ARRAY_SIZE 20
 

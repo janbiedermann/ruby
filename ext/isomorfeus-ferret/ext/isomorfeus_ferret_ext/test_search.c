@@ -5,6 +5,8 @@
 #include "testhelper.h"
 #include "test.h"
 
+#undef close
+
 #define ARRAY_SIZE 40
 
 static FrtSymbol date, field, cat, number;
@@ -143,8 +145,7 @@ static FrtTokenStream *dbl_tf_new(FrtTokenStream *sub_ts)
     return ts;
 }
 
-FrtAnalyzer *dbl_analyzer_new()
-{
+FrtAnalyzer *dbl_analyzer_new(void) {
     FrtTokenStream *ts;
     ts = dbl_tf_new(frt_whitespace_tokenizer_new(false));
     return frt_analyzer_new(ts, NULL, NULL);

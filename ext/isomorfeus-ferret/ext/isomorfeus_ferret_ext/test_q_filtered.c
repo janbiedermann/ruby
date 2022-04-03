@@ -1,6 +1,8 @@
 #include "frt_search.h"
 #include "test.h"
 
+#undef close
+
 static FrtSymbol num, flipflop;
 
 extern void prepare_filter_index(FrtStore *store);

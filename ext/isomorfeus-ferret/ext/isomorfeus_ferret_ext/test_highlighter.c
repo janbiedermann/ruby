@@ -3,6 +3,8 @@
 #include "testhelper.h"
 #include "test.h"
 
+#undef close
+
 #define ARRAY_SIZE 100
 
 static void test_match_vector(TestCase *tc, void *data)

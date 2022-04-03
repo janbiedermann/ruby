@@ -1,6 +1,8 @@
 #include "frt_search.h"
 #include "test.h"
 
+#undef close
+
 #define ARRAY_SIZE 20
 #define TEST_SE(query, ir, expected) do { \
     FrtSpanEnum *__se = ((FrtSpanQuery *)query)->get_spans(query, ir); \

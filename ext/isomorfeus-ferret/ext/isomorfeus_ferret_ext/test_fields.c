@@ -22,8 +22,7 @@ void field_prop_test(TestCase *tc,
                      bool omit_norms,
                      bool store_term_vector,
                      bool store_positions,
-                     bool store_offsets)
-{
+                     bool store_offsets) {
     tst_ptr_equal(line_num, tc, (void *)name, (void *)fi->name);
     tst_flt_equal(line_num, tc, boost, fi->boost);
     tst_int_equal(line_num, tc, is_stored,          fi_is_stored(fi));
@@ -282,8 +281,7 @@ static char *prepare_bin_data(int len)
         Assert(memcmp(mdata, df->data[index], mlen) == 0, "Data should be equal");\
     } while (0)
 
-static FrtDocument *prepare_doc()
-{
+static FrtDocument *prepare_doc(void) {
     FrtDocument *doc = frt_doc_new();
     FrtDocField *df;
     char *bin_data = prepare_bin_data(BIN_DATA_LEN);
@@ -309,8 +307,7 @@ static FrtDocument *prepare_doc()
     return doc;
 }
 
-static FrtFieldInfos *prepare_fis()
-{
+static FrtFieldInfos *prepare_fis(void) {
     FrtFieldInfos *fis = frt_fis_new(FRT_STORE_YES, FRT_INDEX_YES, FRT_TERM_VECTOR_NO);
     frt_fis_add_field(fis, frt_fi_new(rb_intern("ignored"), FRT_STORE_NO, FRT_INDEX_NO, FRT_TERM_VECTOR_NO));
     frt_fis_add_field(fis, frt_fi_new(rb_intern("unstored"), FRT_STORE_NO, FRT_INDEX_YES, FRT_TERM_VECTOR_WITH_POSITIONS_OFFSETS));

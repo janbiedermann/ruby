@@ -914,6 +914,11 @@ const rb_data_type_t frb_term_doc_enum_t = {
     }
 };
 
+static VALUE frb_tde_alloc(VALUE rclass) {
+    FrtTermDocEnum *tde = FRT_ALLOC_AND_ZERO(FrtTermDocEnum);
+    return TypedData_Wrap_Struct(rclass, &frb_term_doc_enum_t, tde);
+}
+
 static VALUE frb_get_tde(VALUE rir, FrtTermDocEnum *tde) {
     VALUE self = TypedData_Wrap_Struct(cTermDocEnum, &frb_term_doc_enum_t, tde);
     rb_ivar_set(self, id_fld_num_map, rb_ivar_get(rir, id_fld_num_map));
@@ -928,9 +933,7 @@ static VALUE frb_get_tde(VALUE rir, FrtTermDocEnum *tde) {
  *  you can call next or each to skip through the documents and positions of
  *  this particular term.
  */
-static VALUE
-frb_tde_seek(VALUE self, VALUE rfield, VALUE rterm)
-{
+static VALUE frb_tde_seek(VALUE self, VALUE rfield, VALUE rterm) {
     FrtTermDocEnum *tde = (FrtTermDocEnum *)DATA_PTR(self);
     char *term;
     VALUE rfnum_map = rb_ivar_get(self, id_fld_num_map);
@@ -940,8 +943,7 @@ frb_tde_seek(VALUE self, VALUE rfield, VALUE rterm)
     if (rfnum != Qnil) {
         field_num = FIX2INT(rfnum);
     } else {
-        rb_raise(rb_eArgError, "field %s doesn't exist in the index",
-                rb_id2name(frb_field(rfield)));
+        rb_raise(rb_eArgError, "field %s doesn't exist in the index", rb_id2name(frb_field(rfield)));
     }
     tde->seek(tde, field_num, term);
     return self;
@@ -959,9 +961,7 @@ frb_tde_seek(VALUE self, VALUE rfield, VALUE rterm)
  *  However the +seek_term_enum+ method saves an index lookup so should offer
  *  a large performance improvement.
  */
-static VALUE
-frb_tde_seek_te(VALUE self, VALUE rterm_enum)
-{
+static VALUE frb_tde_seek_te(VALUE self, VALUE rterm_enum) {
     FrtTermDocEnum *tde = (FrtTermDocEnum *)DATA_PTR(self);
     FrtTermEnum *te = (FrtTermEnum *)frb_rb_data_ptr(rterm_enum);
     tde->seek_te(tde, te);
@@ -974,9 +974,7 @@ frb_tde_seek_te(VALUE self, VALUE rterm_enum)
  *
  *  Returns the current document number pointed to by the +term_doc_enum+.
  */
-static VALUE
-frb_tde_doc(VALUE self)
-{
+static VALUE frb_tde_doc(VALUE self) {
     FrtTermDocEnum *tde = (FrtTermDocEnum *)DATA_PTR(self);
     return INT2FIX(tde->doc_num(tde));
 }
@@ -988,9 +986,7 @@ frb_tde_doc(VALUE self)
  *  Returns the frequency of the current document pointed to by the
  *  +term_doc_enum+.
  */
-static VALUE
-frb_tde_freq(VALUE self)
-{
+static VALUE frb_tde_freq(VALUE self) {
     FrtTermDocEnum *tde = (FrtTermDocEnum *)DATA_PTR(self);
     return INT2FIX(tde->freq(tde));
 }
@@ -1002,9 +998,7 @@ frb_tde_freq(VALUE self)
  *  Move forward to the next document in the enumeration. Returns +true+ if
  *  there is another document or +false+ otherwise.
  */
-static VALUE
-frb_tde_next(VALUE self)
-{
+static VALUE frb_tde_next(VALUE self) {
     FrtTermDocEnum *tde = (FrtTermDocEnum *)DATA_PTR(self);
     return tde->next(tde) ? Qtrue : Qfalse;
 }
@@ -1016,9 +1010,7 @@ frb_tde_next(VALUE self)
  *  Move forward to the next document in the enumeration. Returns +true+ if
  *  there is another document or +false+ otherwise.
  */
-static VALUE
-frb_tde_next_position(VALUE self)
-{
+static VALUE frb_tde_next_position(VALUE self) {
     FrtTermDocEnum *tde = (FrtTermDocEnum *)DATA_PTR(self);
     int pos;
     if (tde->next_position == NULL) {
@@ -1040,9 +1032,7 @@ frb_tde_next_position(VALUE self)
  *  NOTE: this method can only be called once after each seek. If you need to
  *  call +#each+ again then you should call +#seek+ again too.
  */
-static VALUE
-frb_tde_each(VALUE self)
-{
+static VALUE frb_tde_each(VALUE self) {
     int doc_cnt = 0;
     FrtTermDocEnum *tde = (FrtTermDocEnum *)DATA_PTR(self);
     VALUE vals = rb_ary_new2(2);
@@ -1084,9 +1074,7 @@ frb_tde_each(VALUE self)
  *    #   [30,3]
  *    # ]
  */
-static VALUE
-frb_tde_to_json(int argc, VALUE *argv, VALUE self)
-{
+static VALUE frb_tde_to_json(int argc, VALUE *argv, VALUE self) {
     FrtTermDocEnum *tde = (FrtTermDocEnum *)DATA_PTR(self);
     VALUE rjson;
     char *json, *jp;
@@ -1158,9 +1146,7 @@ frb_tde_to_json(int argc, VALUE *argv, VALUE self)
  *      puts "  #{positions.join(', ')}"
  *    end
  */
-static VALUE
-frb_tde_each_position(VALUE self)
-{
+static VALUE frb_tde_each_position(VALUE self) {
     FrtTermDocEnum *tde = (FrtTermDocEnum *)DATA_PTR(self);
     int pos;
     if (tde->next_position == NULL) {
@@ -1181,9 +1167,7 @@ frb_tde_each_position(VALUE self)
  *  Skip to the required document number +target+ and return true if there is
  *  a document >= +target+.
  */
-static VALUE
-frb_tde_skip_to(VALUE self, VALUE rtarget)
-{
+static VALUE frb_tde_skip_to(VALUE self, VALUE rtarget) {
     FrtTermDocEnum *tde = (FrtTermDocEnum *)DATA_PTR(self);
     return tde->skip_to(tde, FIX2INT(rtarget)) ? Qtrue : Qfalse;
 }
@@ -1194,9 +1178,7 @@ frb_tde_skip_to(VALUE self, VALUE rtarget)
  *
  ****************************************************************************/
 
-static VALUE
-frb_get_tv_offsets(FrtOffset *offset)
-{
+static VALUE frb_get_tv_offsets(FrtOffset *offset) {
     return rb_struct_new(cTVOffsets,
                          ULL2NUM((frt_u64)offset->start),
                          ULL2NUM((frt_u64)offset->end),
@@ -1209,9 +1191,7 @@ frb_get_tv_offsets(FrtOffset *offset)
  *
  ****************************************************************************/
 
-static VALUE
-frb_get_tv_term(FrtTVTerm *tv_term)
-{
+static VALUE frb_get_tv_term(FrtTVTerm *tv_term) {
     int i;
     const int freq = tv_term->freq;
     VALUE rtext;
@@ -1233,9 +1213,7 @@ frb_get_tv_term(FrtTVTerm *tv_term)
  *
  ****************************************************************************/
 
-static VALUE
-frb_get_tv(FrtTermVector *tv)
-{
+static VALUE frb_get_tv(FrtTermVector *tv) {
     int i;
     FrtTVTerm *terms = tv->terms;
     const int t_cnt = tv->term_cnt;
@@ -1266,15 +1244,11 @@ frb_get_tv(FrtTermVector *tv)
  *
  ****************************************************************************/
 
-void
-frb_iw_free(void *p)
-{
+void frb_iw_free(void *p) {
     frt_iw_close((FrtIndexWriter *)p);
 }
 
-void
-frb_iw_mark(void *p)
-{
+void frb_iw_mark(void *p) {
     FrtIndexWriter *iw = (FrtIndexWriter *)p;
     frb_gc_mark(iw->analyzer);
     frb_gc_mark(iw->store);
@@ -1289,9 +1263,7 @@ frb_iw_mark(void *p)
  *  exclusively by the index writer. The garbage collector will do this
  *  automatically if not called explicitly.
  */
-static VALUE
-frb_iw_close(VALUE self)
-{
+static VALUE frb_iw_close(VALUE self) {
     FrtIndexWriter *iw = (FrtIndexWriter *)DATA_PTR(self);
     frt_iw_close(iw);
     return Qnil;
@@ -2008,6 +1980,11 @@ const rb_data_type_t frb_lazy_doc_t = {
         .dsize = frb_lazy_doc_size
     }
 };
+
+static VALUE frb_lzd_alloc(VALUE klass) {
+    FrtLazyDoc *ld = FRT_ALLOC(FrtLazyDoc);
+    return TypedData_Wrap_Struct(klass, &frb_lazy_doc_t, ld);
+}
 
 static VALUE frb_lazy_df_load(VALUE self, VALUE rkey, FrtLazyDocField *lazy_df) {
     VALUE rdata = Qnil;
@@ -3037,14 +3014,12 @@ Init_TermEnum(void) {
  *      puts "  #{positions.join(', ')}"
  *    end
  */
-static void
-Init_TermDocEnum(void)
-{
+static void Init_TermDocEnum(void) {
     id_fld_num_map = rb_intern("@field_num_map");
     id_field_num = rb_intern("@field_num");
 
     cTermDocEnum = rb_define_class_under(mIndex, "TermDocEnum", rb_cObject);
-    rb_define_alloc_func(cTermDocEnum, frb_data_alloc);
+    rb_define_alloc_func(cTermDocEnum, frb_tde_alloc);
     rb_define_method(cTermDocEnum, "seek",           frb_tde_seek, 2);
     rb_define_method(cTermDocEnum, "seek_term_enum", frb_tde_seek_te, 1);
     rb_define_method(cTermDocEnum, "doc",            frb_tde_doc, 0);
@@ -3077,9 +3052,7 @@ cTermVector = rb_define_class_under(mIndex, "TermVector", rb_cObject);
  *
  *  See the Analysis module for more information on setting the offsets.
  */
-static void
-Init_TVOffsets(void)
-{
+static void Init_TVOffsets(void) {
     const char *tv_offsets_class = "TVOffsets";
     /* rdochack
     cTVOffsets = rb_define_class_under(cTermVector, "TVOffsets", rb_cObject);
@@ -3275,112 +3248,80 @@ Init_TermVector(void)
  *
  *    index_writer.delete(:id, "/path/to/indexed/file")
  */
-void
-Init_IndexWriter(void)
-{
+void Init_IndexWriter(void) {
     id_boost = rb_intern("boost");
 
-    sym_create              = ID2SYM(rb_intern("create"));
-    sym_create_if_missing   = ID2SYM(rb_intern("create_if_missing"));
-    sym_field_infos         = ID2SYM(rb_intern("field_infos"));
+    sym_create            = ID2SYM(rb_intern("create"));
+    sym_create_if_missing = ID2SYM(rb_intern("create_if_missing"));
+    sym_field_infos       = ID2SYM(rb_intern("field_infos"));
 
-    sym_chunk_size          = ID2SYM(rb_intern("chunk_size"));
-    sym_max_buffer_memory   = ID2SYM(rb_intern("max_buffer_memory"));
-    sym_index_interval      = ID2SYM(rb_intern("term_index_interval"));
-    sym_skip_interval       = ID2SYM(rb_intern("doc_skip_interval"));
-    sym_merge_factor        = ID2SYM(rb_intern("merge_factor"));
-    sym_max_buffered_docs   = ID2SYM(rb_intern("max_buffered_docs"));
-    sym_max_merge_docs      = ID2SYM(rb_intern("max_merge_docs"));
-    sym_max_field_length    = ID2SYM(rb_intern("max_field_length"));
-    sym_use_compound_file   = ID2SYM(rb_intern("use_compound_file"));
+    sym_chunk_size        = ID2SYM(rb_intern("chunk_size"));
+    sym_max_buffer_memory = ID2SYM(rb_intern("max_buffer_memory"));
+    sym_index_interval    = ID2SYM(rb_intern("term_index_interval"));
+    sym_skip_interval     = ID2SYM(rb_intern("doc_skip_interval"));
+    sym_merge_factor      = ID2SYM(rb_intern("merge_factor"));
+    sym_max_buffered_docs = ID2SYM(rb_intern("max_buffered_docs"));
+    sym_max_merge_docs    = ID2SYM(rb_intern("max_merge_docs"));
+    sym_max_field_length  = ID2SYM(rb_intern("max_field_length"));
+    sym_use_compound_file = ID2SYM(rb_intern("use_compound_file"));
 
     cIndexWriter = rb_define_class_under(mIndex, "IndexWriter", rb_cObject);
     rb_define_alloc_func(cIndexWriter, frb_iw_alloc);
 
     rb_define_const(cIndexWriter, "WRITE_LOCK_TIMEOUT", INT2FIX(1));
     rb_define_const(cIndexWriter, "COMMIT_LOCK_TIMEOUT", INT2FIX(10));
-    rb_define_const(cIndexWriter, "WRITE_LOCK_NAME",
-                    rb_str_new2(FRT_WRITE_LOCK_NAME));
-    rb_define_const(cIndexWriter, "COMMIT_LOCK_NAME",
-                    rb_str_new2(FRT_COMMIT_LOCK_NAME));
-    rb_define_const(cIndexWriter, "DEFAULT_CHUNK_SIZE",
-                    INT2FIX(frt_default_config.chunk_size));
-    rb_define_const(cIndexWriter, "DEFAULT_MAX_BUFFER_MEMORY",
-                    INT2FIX(frt_default_config.max_buffer_memory));
-    rb_define_const(cIndexWriter, "DEFAULT_TERM_INDEX_INTERVAL",
-                    INT2FIX(frt_default_config.index_interval));
-    rb_define_const(cIndexWriter, "DEFAULT_DOC_SKIP_INTERVAL",
-                    INT2FIX(frt_default_config.skip_interval));
-    rb_define_const(cIndexWriter, "DEFAULT_MERGE_FACTOR",
-                    INT2FIX(frt_default_config.merge_factor));
-    rb_define_const(cIndexWriter, "DEFAULT_MAX_BUFFERED_DOCS",
-                    INT2FIX(frt_default_config.max_buffered_docs));
-    rb_define_const(cIndexWriter, "DEFAULT_MAX_MERGE_DOCS",
-                    INT2FIX(frt_default_config.max_merge_docs));
-    rb_define_const(cIndexWriter, "DEFAULT_MAX_FIELD_LENGTH",
-                    INT2FIX(frt_default_config.max_field_length));
-    rb_define_const(cIndexWriter, "DEFAULT_USE_COMPOUND_FILE",
-                    frt_default_config.use_compound_file ? Qtrue : Qfalse);
+    rb_define_const(cIndexWriter, "WRITE_LOCK_NAME", rb_str_new2(FRT_WRITE_LOCK_NAME));
+    rb_define_const(cIndexWriter, "COMMIT_LOCK_NAME", rb_str_new2(FRT_COMMIT_LOCK_NAME));
+    rb_define_const(cIndexWriter, "DEFAULT_CHUNK_SIZE", INT2FIX(frt_default_config.chunk_size));
+    rb_define_const(cIndexWriter, "DEFAULT_MAX_BUFFER_MEMORY", INT2FIX(frt_default_config.max_buffer_memory));
+    rb_define_const(cIndexWriter, "DEFAULT_TERM_INDEX_INTERVAL", INT2FIX(frt_default_config.index_interval));
+    rb_define_const(cIndexWriter, "DEFAULT_DOC_SKIP_INTERVAL", INT2FIX(frt_default_config.skip_interval));
+    rb_define_const(cIndexWriter, "DEFAULT_MERGE_FACTOR", INT2FIX(frt_default_config.merge_factor));
+    rb_define_const(cIndexWriter, "DEFAULT_MAX_BUFFERED_DOCS", INT2FIX(frt_default_config.max_buffered_docs));
+    rb_define_const(cIndexWriter, "DEFAULT_MAX_MERGE_DOCS", INT2FIX(frt_default_config.max_merge_docs));
+    rb_define_const(cIndexWriter, "DEFAULT_MAX_FIELD_LENGTH", INT2FIX(frt_default_config.max_field_length));
+    rb_define_const(cIndexWriter, "DEFAULT_USE_COMPOUND_FILE", frt_default_config.use_compound_file ? Qtrue : Qfalse);
 
-    rb_define_method(cIndexWriter, "initialize",    frb_iw_init, -1);
-    rb_define_method(cIndexWriter, "doc_count",     frb_iw_get_doc_count, 0);
-    rb_define_method(cIndexWriter, "close",         frb_iw_close, 0);
-    rb_define_method(cIndexWriter, "add_document",  frb_iw_add_doc, 1);
-    rb_define_method(cIndexWriter, "<<",            frb_iw_add_doc, 1);
-    rb_define_method(cIndexWriter, "optimize",      frb_iw_optimize, 0);
-    rb_define_method(cIndexWriter, "commit",        frb_iw_commit, 0);
-    rb_define_method(cIndexWriter, "add_readers",   frb_iw_add_readers, 1);
-    rb_define_method(cIndexWriter, "delete",        frb_iw_delete, 2);
-    rb_define_method(cIndexWriter, "field_infos",   frb_iw_field_infos, 0);
-    rb_define_method(cIndexWriter, "analyzer",      frb_iw_get_analyzer, 0);
-    rb_define_method(cIndexWriter, "analyzer=",     frb_iw_set_analyzer, 1);
-    rb_define_method(cIndexWriter, "version",       frb_iw_version, 0);
+    rb_define_method(cIndexWriter, "initialize",   frb_iw_init, -1);
+    rb_define_method(cIndexWriter, "doc_count",    frb_iw_get_doc_count, 0);
+    rb_define_method(cIndexWriter, "close",        frb_iw_close, 0);
+    rb_define_method(cIndexWriter, "add_document", frb_iw_add_doc, 1);
+    rb_define_method(cIndexWriter, "<<",           frb_iw_add_doc, 1);
+    rb_define_method(cIndexWriter, "optimize",     frb_iw_optimize, 0);
+    rb_define_method(cIndexWriter, "commit",       frb_iw_commit, 0);
+    rb_define_method(cIndexWriter, "add_readers",  frb_iw_add_readers, 1);
+    rb_define_method(cIndexWriter, "delete",       frb_iw_delete, 2);
+    rb_define_method(cIndexWriter, "field_infos",  frb_iw_field_infos, 0);
+    rb_define_method(cIndexWriter, "analyzer",     frb_iw_get_analyzer, 0);
+    rb_define_method(cIndexWriter, "analyzer=",    frb_iw_set_analyzer, 1);
+    rb_define_method(cIndexWriter, "version",      frb_iw_version, 0);
 
-    rb_define_method(cIndexWriter, "chunk_size",
-                     frb_iw_get_chunk_size, 0);
-    rb_define_method(cIndexWriter, "chunk_size=",
-                     frb_iw_set_chunk_size, 1);
+    rb_define_method(cIndexWriter, "chunk_size",  frb_iw_get_chunk_size, 0);
+    rb_define_method(cIndexWriter, "chunk_size=", frb_iw_set_chunk_size, 1);
 
-    rb_define_method(cIndexWriter, "max_buffer_memory",
-                     frb_iw_get_max_buffer_memory, 0);
-    rb_define_method(cIndexWriter, "max_buffer_memory=",
-                     frb_iw_set_max_buffer_memory, 1);
+    rb_define_method(cIndexWriter, "max_buffer_memory",  frb_iw_get_max_buffer_memory, 0);
+    rb_define_method(cIndexWriter, "max_buffer_memory=", frb_iw_set_max_buffer_memory, 1);
 
-    rb_define_method(cIndexWriter, "term_index_interval",
-                     frb_iw_get_index_interval, 0);
-    rb_define_method(cIndexWriter, "term_index_interval=",
-                     frb_iw_set_index_interval, 1);
+    rb_define_method(cIndexWriter, "term_index_interval",  frb_iw_get_index_interval, 0);
+    rb_define_method(cIndexWriter, "term_index_interval=", frb_iw_set_index_interval, 1);
 
-    rb_define_method(cIndexWriter, "doc_skip_interval",
-                     frb_iw_get_skip_interval, 0);
-    rb_define_method(cIndexWriter, "doc_skip_interval=",
-                     frb_iw_set_skip_interval, 1);
+    rb_define_method(cIndexWriter, "doc_skip_interval",  frb_iw_get_skip_interval, 0);
+    rb_define_method(cIndexWriter, "doc_skip_interval=", frb_iw_set_skip_interval, 1);
 
-    rb_define_method(cIndexWriter, "merge_factor",
-                     frb_iw_get_merge_factor, 0);
-    rb_define_method(cIndexWriter, "merge_factor=",
-                     frb_iw_set_merge_factor, 1);
+    rb_define_method(cIndexWriter, "merge_factor",  frb_iw_get_merge_factor, 0);
+    rb_define_method(cIndexWriter, "merge_factor=", frb_iw_set_merge_factor, 1);
 
-    rb_define_method(cIndexWriter, "max_buffered_docs",
-                     frb_iw_get_max_buffered_docs, 0);
-    rb_define_method(cIndexWriter, "max_buffered_docs=",
-                     frb_iw_set_max_buffered_docs, 1);
+    rb_define_method(cIndexWriter, "max_buffered_docs",  frb_iw_get_max_buffered_docs, 0);
+    rb_define_method(cIndexWriter, "max_buffered_docs=", frb_iw_set_max_buffered_docs, 1);
 
-    rb_define_method(cIndexWriter, "max_merge_docs",
-                     frb_iw_get_max_merge_docs, 0);
-    rb_define_method(cIndexWriter, "max_merge_docs=",
-                     frb_iw_set_max_merge_docs, 1);
+    rb_define_method(cIndexWriter, "max_merge_docs",  frb_iw_get_max_merge_docs, 0);
+    rb_define_method(cIndexWriter, "max_merge_docs=", frb_iw_set_max_merge_docs, 1);
 
-    rb_define_method(cIndexWriter, "max_field_length",
-                     frb_iw_get_max_field_length, 0);
-    rb_define_method(cIndexWriter, "max_field_length=",
-                     frb_iw_set_max_field_length, 1);
+    rb_define_method(cIndexWriter, "max_field_length",  frb_iw_get_max_field_length, 0);
+    rb_define_method(cIndexWriter, "max_field_length=", frb_iw_set_max_field_length, 1);
 
-    rb_define_method(cIndexWriter, "use_compound_file",
-                     frb_iw_get_use_compound_file, 0);
-    rb_define_method(cIndexWriter, "use_compound_file=",
-                     frb_iw_set_use_compound_file, 1);
-
+    rb_define_method(cIndexWriter, "use_compound_file",  frb_iw_get_use_compound_file, 0);
+    rb_define_method(cIndexWriter, "use_compound_file=", frb_iw_set_use_compound_file, 1);
 }
 
 /*
@@ -3413,18 +3354,16 @@ Init_IndexWriter(void)
  *    doc.values   #=> ["the title", "the content"]
  *    doc.fields   #=> [:title, :content]
  */
-void
-Init_LazyDoc(void)
-{
+void Init_LazyDoc(void) {
     id_fields = rb_intern("@fields");
 
     cLazyDoc = rb_define_class_under(mIndex, "LazyDoc", rb_cHash);
-    rb_define_method(cLazyDoc, "default",   frb_lzd_default, 1);
-    rb_define_method(cLazyDoc, "load",      frb_lzd_load, 0);
-    rb_define_method(cLazyDoc, "fields",    frb_lzd_fields, 0);
+    rb_define_method(cLazyDoc, "default", frb_lzd_default, 1);
+    rb_define_method(cLazyDoc, "load",    frb_lzd_load, 0);
+    rb_define_method(cLazyDoc, "fields",  frb_lzd_fields, 0);
 
     cLazyDocData = rb_define_class_under(cLazyDoc, "LazyDocData", rb_cObject);
-    rb_define_alloc_func(cLazyDocData, frb_data_alloc);
+    rb_define_alloc_func(cLazyDocData, frb_lzd_alloc);
 }
 
 /*
@@ -3437,41 +3376,39 @@ Init_LazyDoc(void)
  *  index, accessing term-vectors or deleting documents by document id. It is
  *  also used internally by IndexSearcher.
  */
-void
-Init_IndexReader(void)
-{
+void Init_IndexReader(void) {
     cIndexReader = rb_define_class_under(mIndex, "IndexReader", rb_cObject);
     rb_define_alloc_func(cIndexReader, frb_ir_alloc);
-    rb_define_method(cIndexReader, "initialize",    frb_ir_init, 1);
-    rb_define_method(cIndexReader, "set_norm",      frb_ir_set_norm, 3);
-    rb_define_method(cIndexReader, "norms",         frb_ir_norms, 1);
-    rb_define_method(cIndexReader, "get_norms_into",frb_ir_get_norms_into, 3);
-    rb_define_method(cIndexReader, "commit",        frb_ir_commit, 0);
-    rb_define_method(cIndexReader, "close",         frb_ir_close, 0);
-    rb_define_method(cIndexReader, "has_deletions?",frb_ir_has_deletions, 0);
-    rb_define_method(cIndexReader, "delete",        frb_ir_delete, 1);
-    rb_define_method(cIndexReader, "deleted?",      frb_ir_is_deleted, 1);
-    rb_define_method(cIndexReader, "max_doc",       frb_ir_max_doc, 0);
-    rb_define_method(cIndexReader, "num_docs",      frb_ir_num_docs, 0);
-    rb_define_method(cIndexReader, "undelete_all",  frb_ir_undelete_all, 0);
-    rb_define_method(cIndexReader, "latest?",       frb_ir_is_latest, 0);
-    rb_define_method(cIndexReader, "get_document",  frb_ir_get_doc, -1);
-    rb_define_method(cIndexReader, "[]",            frb_ir_get_doc, -1);
-    rb_define_method(cIndexReader, "term_vector",   frb_ir_term_vector, 2);
-    rb_define_method(cIndexReader, "term_vectors",  frb_ir_term_vectors, 1);
-    rb_define_method(cIndexReader, "term_docs",     frb_ir_term_docs, 0);
-    rb_define_method(cIndexReader, "term_positions",frb_ir_term_positions, 0);
-    rb_define_method(cIndexReader, "term_docs_for", frb_ir_term_docs_for, 2);
+    rb_define_method(cIndexReader, "initialize",     frb_ir_init, 1);
+    rb_define_method(cIndexReader, "set_norm",       frb_ir_set_norm, 3);
+    rb_define_method(cIndexReader, "norms",          frb_ir_norms, 1);
+    rb_define_method(cIndexReader, "get_norms_into", frb_ir_get_norms_into, 3);
+    rb_define_method(cIndexReader, "commit",         frb_ir_commit, 0);
+    rb_define_method(cIndexReader, "close",          frb_ir_close, 0);
+    rb_define_method(cIndexReader, "has_deletions?", frb_ir_has_deletions, 0);
+    rb_define_method(cIndexReader, "delete",         frb_ir_delete, 1);
+    rb_define_method(cIndexReader, "deleted?",       frb_ir_is_deleted, 1);
+    rb_define_method(cIndexReader, "max_doc",        frb_ir_max_doc, 0);
+    rb_define_method(cIndexReader, "num_docs",       frb_ir_num_docs, 0);
+    rb_define_method(cIndexReader, "undelete_all",   frb_ir_undelete_all, 0);
+    rb_define_method(cIndexReader, "latest?",        frb_ir_is_latest, 0);
+    rb_define_method(cIndexReader, "get_document",   frb_ir_get_doc, -1);
+    rb_define_method(cIndexReader, "[]",             frb_ir_get_doc, -1);
+    rb_define_method(cIndexReader, "term_vector",    frb_ir_term_vector, 2);
+    rb_define_method(cIndexReader, "term_vectors",   frb_ir_term_vectors, 1);
+    rb_define_method(cIndexReader, "term_docs",      frb_ir_term_docs, 0);
+    rb_define_method(cIndexReader, "term_positions", frb_ir_term_positions, 0);
+    rb_define_method(cIndexReader, "term_docs_for",  frb_ir_term_docs_for, 2);
     rb_define_method(cIndexReader, "term_positions_for", frb_ir_t_pos_for, 2);
-    rb_define_method(cIndexReader, "doc_freq",      frb_ir_doc_freq, 2);
-    rb_define_method(cIndexReader, "terms",         frb_ir_terms, 1);
-    rb_define_method(cIndexReader, "terms_from",    frb_ir_terms_from, 2);
-    rb_define_method(cIndexReader, "term_count",    frb_ir_term_count, 1);
-    rb_define_method(cIndexReader, "fields",        frb_ir_fields, 0);
-    rb_define_method(cIndexReader, "field_names",   frb_ir_fields, 0);
-    rb_define_method(cIndexReader, "field_infos",   frb_ir_field_infos, 0);
+    rb_define_method(cIndexReader, "doc_freq",       frb_ir_doc_freq, 2);
+    rb_define_method(cIndexReader, "terms",          frb_ir_terms, 1);
+    rb_define_method(cIndexReader, "terms_from",     frb_ir_terms_from, 2);
+    rb_define_method(cIndexReader, "term_count",     frb_ir_term_count, 1);
+    rb_define_method(cIndexReader, "fields",         frb_ir_fields, 0);
+    rb_define_method(cIndexReader, "field_names",    frb_ir_fields, 0);
+    rb_define_method(cIndexReader, "field_infos",    frb_ir_field_infos, 0);
     rb_define_method(cIndexReader, "tokenized_fields", frb_ir_tk_fields, 0);
-    rb_define_method(cIndexReader, "version",       frb_ir_version, 0);
+    rb_define_method(cIndexReader, "version",        frb_ir_version, 0);
 }
 
 /* rdoc hack
@@ -3496,9 +3433,7 @@ extern VALUE mFerret = rb_define_module("Ferret");
  *  building tag clouds, creating more-like-this queries, custom highlighting
  *  etc. They are also useful for index browsers.
  */
-void
-Init_Index(void)
-{
+void Init_Index(void) {
     mIndex = rb_define_module_under(mFerret, "Index");
 
     sym_boost     = ID2SYM(rb_intern("boost"));

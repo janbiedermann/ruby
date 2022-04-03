@@ -1594,7 +1594,7 @@ static VALUE frb_re_analyzer_init(int argc, VALUE *argv, VALUE self) {
     object_add(ts, rets);
 
     if (lower != Qfalse) {
-        rets = frb_lowercase_filter_init(frb_data_alloc(cLowerCaseFilter), rets);
+        rets = frb_lowercase_filter_init(frb_lowercase_filter_alloc(cLowerCaseFilter), rets);
         ts = DATA_PTR(rets);
     }
     FRT_REF(ts);

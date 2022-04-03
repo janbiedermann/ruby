@@ -18,8 +18,7 @@ const FrtConfig lucene_config = {
 };
 
 
-static FrtFieldInfos *prep_fis()
-{
+static FrtFieldInfos *prep_fis(void) {
     return frt_fis_new(FRT_STORE_NO, FRT_INDEX_YES, FRT_TERM_VECTOR_NO);
 }
 

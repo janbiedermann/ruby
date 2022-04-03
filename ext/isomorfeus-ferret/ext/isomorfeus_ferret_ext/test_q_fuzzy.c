@@ -1,6 +1,8 @@
 #include "frt_search.h"
 #include "test.h"
 
+#undef close
+
 #define ARRAY_SIZE 20
 
 static FrtSymbol field;
