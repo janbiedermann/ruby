@@ -2,6 +2,8 @@
 #include "isomorfeus_ferret.h"
 #include <time.h>
 
+#undef rename
+
 static ID id_ref_cnt;
 VALUE cLock;
 VALUE cLockError;
@@ -10,41 +12,46 @@ VALUE cRAMDirectory;
 VALUE cFSDirectory;
 
 /****************************************************************************
- *
  * Lock Methods
- *
  ****************************************************************************/
 
-void
-frb_unwrap_locks(FrtStore *store)
-{
+void frb_unwrap_locks(FrtStore *store) {
     FrtHashSetEntry *hse = store->locks->first;
     for (; hse; hse = hse->next) {
         void *lock = hse->elem;
         VALUE rlock = object_get(lock);
         if (rlock != Qnil) {
             object_del(lock);
-            Frt_Unwrap_Struct(rlock);
         }
     }
 }
 
-void
-frb_lock_free(void *p)
-{
+void frb_lock_free(void *p) {
     FrtLock *lock = (FrtLock *)p;
     object_del(p);
     frt_close_lock(lock);
 }
 
-void
-frb_lock_mark(void *p)
-{
+void frb_lock_mark(void *p) {
     FrtLock *lock = (FrtLock *)p;
     frb_gc_mark(lock->store);
 }
 
-#define GET_LOCK(lock, self) Data_Get_Struct(self, FrtLock, lock)
+const size_t frb_lock_size(const void *p) {
+    return sizeof(FrtLock);
+    (void)p;
+}
+
+const rb_data_type_t frb_lock_t = {
+    .wrap_struct_name = "FrbLock",
+    .function = {
+        .dmark = frb_lock_mark,
+        .dfree = frb_lock_free,
+        .dsize = frb_lock_size
+    }
+};
+
+#define GET_LOCK(lock, self) TypedData_Get_Struct(self, FrtLock, &frb_lock_t, lock)
 
 /*
  *  call-seq:
@@ -180,9 +187,8 @@ frb_lock_release(VALUE self)
  *
  ****************************************************************************/
 
-void
-frb_dir_free(FrtStore *store)
-{
+void frb_dir_free(void *) {
+    FrtStore *store = (FrtStore *)p;
     frb_unwrap_locks(store);
     object_del(store);
     frt_store_deref(store);
@@ -203,7 +209,6 @@ frb_dir_close(VALUE self)
     int ref_cnt = FIX2INT(rb_ivar_get(self, id_ref_cnt)) - 1;
     rb_ivar_set(self, id_ref_cnt, INT2FIX(ref_cnt));
     if (ref_cnt < 0) {
-        Frt_Unwrap_Struct(self);
         object_del(store);
         frb_unwrap_locks(store);
         frt_store_deref(store);
@@ -308,16 +313,35 @@ frb_dir_rename(VALUE self, VALUE rfrom, VALUE rto)
  *  reserved for lock files
  */
 static VALUE
-frb_dir_make_lock(VALUE self, VALUE rlock_name)
-{
+frb_dir_make_lock(VALUE self, VALUE rlock_name) {
     VALUE rlock;
     FrtLock *lock;
     FrtStore *store = DATA_PTR(self);
     StringValue(rlock_name);
     lock = frt_open_lock(store, rs2s(rlock_name));
-    rlock = Data_Wrap_Struct(cLock, &frb_lock_mark, &frb_lock_free, lock);
+    rlock = TypedData_Wrap_Struct(cLock, &frb_lock_t, lock);
     object_add(lock, rlock);
     return rlock;
+}
+
+/*** FrbStore ****************************************************************/
+
+const size_t frb_store_size(const void *p) {
+    return sizeof(FrtStore);
+    (void)p;
+}
+
+const rb_data_type_t frb_store_t = {
+    .wrap_struct_name = "FrbStore",
+    .function = {
+        .dfree = frb_dir_free,
+        .dsize = frb_store_size
+    }
+};
+
+static VALUE frb_store_alloc(VALUE rclass) {
+    FrtStore *st = frt_store_alloc();
+    return TypedData_Wrap_Struct(rclass, &frb_store_t, st);
 }
 
 /****************************************************************************
@@ -338,21 +362,20 @@ frb_dir_make_lock(VALUE self, VALUE rlock_name)
  *
  *  dir:: Directory to load into memory
  */
-static VALUE
-frb_ramdir_init(int argc, VALUE *argv, VALUE self)
-{
+
+static VALUE frb_ramdir_init(int argc, VALUE *argv, VALUE self) {
     VALUE rdir;
     FrtStore *store;
+    TypedData_Get_Struct(self, FrtStore, &frb_store_t, store);
     switch (rb_scan_args(argc, argv, "01", &rdir)) {
         case 1: {
                     FrtStore *ostore;
-                    Data_Get_Struct(rdir, FrtStore, ostore);
-                    store = frt_open_ram_store_and_copy(ostore, false);
+                    TypedData_Get_Struct(rdir, FrtStore, &frb_store_t, ostore);
+                    frt_open_ram_store_and_copy(store, ostore, false);
                     break;
                 }
-        default: store = frt_open_ram_store();
+        default: frt_open_ram_store(store);
     }
-    Frt_Wrap_Struct(self, NULL, &frb_dir_free, store);
     object_add(store, self);
     rb_ivar_set(self, id_ref_cnt, INT2FIX(0));
     return self;
@@ -398,7 +421,7 @@ frb_fsdir_new(int argc, VALUE *argv, VALUE klass)
     store = frt_open_fs_store(rs2s(rpath));
     if (create) store->clear_all(store);
     if ((self = object_get(store)) == Qnil) {
-        self = Data_Wrap_Struct(klass, NULL, &frb_dir_free, store);
+        self = TypedData_Wrap_Struct(klass, &frb_store_t, store);
         object_add(store, self);
         rb_ivar_set(self, id_ref_cnt, INT2FIX(0));
     }
@@ -497,7 +520,7 @@ void
 Init_RAMDirectory(void)
 {
     cRAMDirectory = rb_define_class_under(mStore, "RAMDirectory", cDirectory);
-    rb_define_alloc_func(cRAMDirectory, frb_data_alloc);
+    rb_define_alloc_func(cRAMDirectory, frb_store_alloc);
     rb_define_method(cRAMDirectory, "initialize", frb_ramdir_init, -1);
 }
 
@@ -514,7 +537,7 @@ void
 Init_FSDirectory(void)
 {
     cFSDirectory = rb_define_class_under(mStore, "FSDirectory", cDirectory);
-    rb_define_alloc_func(cFSDirectory, frb_data_alloc);
+    rb_define_alloc_func(cFSDirectory, frb_store_alloc);
     rb_define_singleton_method(cFSDirectory, "new", frb_fsdir_new, -1);
 }
 

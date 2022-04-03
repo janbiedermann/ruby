@@ -154,7 +154,7 @@ void test_sis_rw(TestCase *tc, void *data)
 
 TestSuite *ts_segments(TestSuite *suite)
 {
-    FrtStore *store = frt_open_ram_store();
+    FrtStore *store = frt_open_ram_store(NULL);
 
     suite = ADD_SUITE(suite);
 

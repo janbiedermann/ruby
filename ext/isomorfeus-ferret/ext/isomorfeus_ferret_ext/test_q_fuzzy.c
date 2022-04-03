@@ -35,7 +35,7 @@ static void test_fuzziness(TestCase *tc, void *data)
     frt_index_create(store, fis);
     frt_fis_deref(fis);
 
-    iw = frt_iw_open(store, frt_whitespace_analyzer_new(false), NULL);
+    iw = frt_iw_open(NULL, store, frt_whitespace_analyzer_new(false), NULL);
 
     add_doc("aaaaa", iw);
     add_doc("aaaab", iw);
@@ -48,7 +48,7 @@ static void test_fuzziness(TestCase *tc, void *data)
     add_doc("aaaaaaaaaaaaaaaaaaaaaaa", iw); /* test max_distances problem */
     frt_iw_close(iw);
 
-    ir = frt_ir_open(store);
+    ir = frt_ir_open(NULL, store);
     sea = frt_isea_new(ir);
 
     q = frt_fuzq_new_conf(field, "aaaaa", 0.0, 5, 10);
@@ -122,12 +122,12 @@ static void test_fuzziness_long(TestCase *tc, void *data)
     frt_index_create(store, fis);
     frt_fis_deref(fis);
 
-    iw = frt_iw_open(store, frt_whitespace_analyzer_new(false), NULL);
+    iw = frt_iw_open(NULL, store, frt_whitespace_analyzer_new(false), NULL);
 
     add_doc("aaaaaaa", iw);
     add_doc("segment", iw);
     frt_iw_close(iw);
-    ir = frt_ir_open(store);
+    ir = frt_ir_open(NULL, store);
     sea = frt_isea_new(ir);
 
     /* not similar enough: */
@@ -226,7 +226,7 @@ static void test_fuzzy_query_hash(TestCase *tc, void *data)
 
 TestSuite *ts_q_fuzzy(TestSuite *suite)
 {
-    FrtStore *store = frt_open_ram_store();
+    FrtStore *store = frt_open_ram_store(NULL);
 
     field = rb_intern("field");
 

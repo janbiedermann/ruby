@@ -24,8 +24,7 @@
  * of the shorter string out of the query string and the index term being
  * compared.
  */
-static int fuzq_calculate_max_distance(FrtFuzzyQuery *fuzq, int m)
-{
+static int fuzq_calculate_max_distance(FrtFuzzyQuery *fuzq, int m) {
     return (int)((1.0 - fuzq->min_sim) * (FRT_MIN(fuzq->text_len, m) + fuzq->pre_len));
 }
 
@@ -35,8 +34,7 @@ static int fuzq_calculate_max_distance(FrtFuzzyQuery *fuzq, int m)
  * lengths up to the FRT_TYPICAL_LONGEST_WORD limit. For words longer than this we
  * calculate the value live.
  */
-static void fuzq_initialize_max_distances(FrtFuzzyQuery *fuzq)
-{
+static void fuzq_initialize_max_distances(FrtFuzzyQuery *fuzq) {
     int i;
     for (i = 0; i < FRT_TYPICAL_LONGEST_WORD; i++) {
         fuzq->max_distances[i] = fuzq_calculate_max_distance(fuzq, i);
@@ -47,8 +45,7 @@ static void fuzq_initialize_max_distances(FrtFuzzyQuery *fuzq)
  * Return the cached max-distance value if the word is within the
  * FRT_TYPICAL_LONGEST_WORD limit.
  */
-static int fuzq_get_max_distance(FrtFuzzyQuery *fuzq, int m)
-{
+static int fuzq_get_max_distance(FrtFuzzyQuery *fuzq, int m) {
     if (m < FRT_TYPICAL_LONGEST_WORD)
         return fuzq->max_distances[m];
     return fuzq_calculate_max_distance(fuzq, m);
@@ -62,10 +59,7 @@ static int fuzq_get_max_distance(FrtFuzzyQuery *fuzq, int m)
  * @params m the string length of +target+
  * @params n the string length of the query string minus length of the prefix
  */
-static float fuzq_score_mn(FrtFuzzyQuery *fuzq,
-                                  const char *target,
-                                  const int m, const int n)
-{
+static float fuzq_score_mn(FrtFuzzyQuery *fuzq, const char *target, const int m, const int n) {
     int i, j, prune;
     int *d_curr, *d_prev;
     const char *text = fuzq->text;
@@ -124,8 +118,7 @@ static float fuzq_score_mn(FrtFuzzyQuery *fuzq,
  *
  * http://mail-archives.apache.org/mod_mbox/lucene-java-dev/200606.mbox/%3c448F0E8C.3050901@alias-i.com%3e
  */
-float frt_fuzq_score(FrtFuzzyQuery *fuzq, const char *target)
-{
+float frt_fuzq_score(FrtFuzzyQuery *fuzq, const char *target) {
     const int m = (int)strlen(target);
     const int n = fuzq->text_len;
 
@@ -148,8 +141,7 @@ float frt_fuzq_score(FrtFuzzyQuery *fuzq, const char *target)
 
 #define FzQ(query) ((FrtFuzzyQuery *)(query))
 
-static char *fuzq_to_s(FrtQuery *self, FrtSymbol curr_field)
-{
+static char *fuzq_to_s(FrtQuery *self, FrtSymbol curr_field) {
     char *buffer, *bptr;
     char *term = FzQ(self)->term;
     FrtSymbol field = FzQ(self)->field;
@@ -174,8 +166,7 @@ static char *fuzq_to_s(FrtQuery *self, FrtSymbol curr_field)
     return buffer;
 }
 
-static FrtQuery *fuzq_rewrite(FrtQuery *self, FrtIndexReader *ir)
-{
+static FrtQuery *fuzq_rewrite(FrtQuery *self, FrtIndexReader *ir) {
     FrtQuery *q;
     FrtFuzzyQuery *fuzq = FzQ(self);
 
@@ -198,8 +189,7 @@ static FrtQuery *fuzq_rewrite(FrtQuery *self, FrtIndexReader *ir)
         strncpy(prefix, term, pre_len);
         prefix[pre_len] = '\0';
         te = ir->terms_from(ir, field_num, prefix);
-    }
-    else {
+    } else {
         te = ir->terms(ir, field_num);
     }
 
@@ -228,21 +218,18 @@ static FrtQuery *fuzq_rewrite(FrtQuery *self, FrtIndexReader *ir)
     return q;
 }
 
-static void fuzq_destroy(FrtQuery *self)
-{
+static void fuzq_destroy(FrtQuery *self) {
     free(FzQ(self)->term);
     free(FzQ(self)->da);
     frt_q_destroy_i(self);
 }
 
-static unsigned long long fuzq_hash(FrtQuery *self)
-{
+static unsigned long long fuzq_hash(FrtQuery *self) {
     return frt_str_hash(FzQ(self)->term) ^ frt_str_hash(rb_id2name(FzQ(self)->field))
         ^ frt_float2int(FzQ(self)->min_sim) ^ FzQ(self)->pre_len;
 }
 
-static int fuzq_eq(FrtQuery *self, FrtQuery *o)
-{
+static int fuzq_eq(FrtQuery *self, FrtQuery *o) {
     FrtFuzzyQuery *fq1 = FzQ(self);
     FrtFuzzyQuery *fq2 = FzQ(o);
 
@@ -252,17 +239,17 @@ static int fuzq_eq(FrtQuery *self, FrtQuery *o)
         && (fq1->min_sim == fq2->min_sim);
 }
 
-FrtQuery *frt_fuzq_new_conf(FrtSymbol field, const char *term,
-                     float min_sim, int pre_len, int max_terms)
-{
-    FrtQuery *self = frt_q_new(FrtFuzzyQuery);
+FrtQuery *frt_fuzq_alloc(void) {
+    return frt_q_new(FrtFuzzyQuery);
+}
 
+FrtQuery *frt_fuzq_init_conf(FrtQuery *self, FrtSymbol field, const char *term, float min_sim, int pre_len, int max_terms) {
     FzQ(self)->field      = field;
     FzQ(self)->term       = frt_estrdup(term);
     FzQ(self)->pre_len    = pre_len ? pre_len : FRT_DEF_PRE_LEN;
     FzQ(self)->min_sim    = min_sim ? min_sim : FRT_DEF_MIN_SIM;
     FzQ(self)->da         = NULL;
-    FrtMTQMaxTerms(self)     = max_terms ? max_terms : FRT_DEF_MAX_TERMS;
+    FrtMTQMaxTerms(self)  = max_terms ? max_terms : FRT_DEF_MAX_TERMS;
 
     self->type            = FUZZY_QUERY;
     self->to_s            = &fuzq_to_s;
@@ -275,7 +262,11 @@ FrtQuery *frt_fuzq_new_conf(FrtSymbol field, const char *term,
     return self;
 }
 
-FrtQuery *frt_fuzq_new(FrtSymbol field, const char *term)
-{
+FrtQuery *frt_fuzq_new_conf(FrtSymbol field, const char *term, float min_sim, int pre_len, int max_terms) {
+    FrtQuery *self = frt_fuzq_alloc();
+    return frt_fuzq_init_conf(self, field, term, min_sim, pre_len, max_terms);
+}
+
+FrtQuery *frt_fuzq_new(FrtSymbol field, const char *term) {
     return frt_fuzq_new_conf(field, term, 0.0f, 0, 0);
 }

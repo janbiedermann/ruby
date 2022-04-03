@@ -1,8 +1,7 @@
 #include "frt_store.h"
 #include <string.h>
 
-static FrtRAMFile *rf_new(const char *name)
-{
+static FrtRAMFile *rf_new(const char *name) {
     FrtRAMFile *rf = FRT_ALLOC(FrtRAMFile);
     rf->buffers = FRT_ALLOC(frt_uchar *);
     rf->buffers[0] = FRT_ALLOC_N(frt_uchar, FRT_BUFFER_SIZE);
@@ -13,16 +12,14 @@ static FrtRAMFile *rf_new(const char *name)
     return rf;
 }
 
-static void rf_extend_if_necessary(FrtRAMFile *rf, int buf_num)
-{
+static void rf_extend_if_necessary(FrtRAMFile *rf, int buf_num) {
     while (rf->bufcnt <= buf_num) {
         FRT_REALLOC_N(rf->buffers, frt_uchar *, (rf->bufcnt + 1));
         rf->buffers[rf->bufcnt++] = FRT_ALLOC_N(frt_uchar, FRT_BUFFER_SIZE);
     }
 }
 
-static void rf_close(void *p)
-{
+static void rf_close(void *p) {
     int i;
     FrtRAMFile *rf = (FrtRAMFile *)p;
     if (rf->ref_cnt > 0) {
@@ -36,15 +33,13 @@ static void rf_close(void *p)
     free(rf);
 }
 
-static void ram_touch(FrtStore *store, const char *filename)
-{
+static void ram_touch(FrtStore *store, const char *filename) {
     if (frt_h_get(store->dir.ht, filename) == NULL) {
         frt_h_set(store->dir.ht, filename, rf_new(filename));
     }
 }
 
-static int ram_exists(FrtStore *store, const char *filename)
-{
+static int ram_exists(FrtStore *store, const char *filename) {
     if (frt_h_get(store->dir.ht, filename) != NULL) {
         return true;
     }
@@ -53,8 +48,7 @@ static int ram_exists(FrtStore *store, const char *filename)
     }
 }
 
-static int ram_remove(FrtStore *store, const char *filename)
-{
+static int ram_remove(FrtStore *store, const char *filename) {
     FrtRAMFile *rf = (FrtRAMFile *)frt_h_rem(store->dir.ht, filename, false);
     if (rf != NULL) {
         FRT_DEREF(rf);
@@ -66,8 +60,7 @@ static int ram_remove(FrtStore *store, const char *filename)
     }
 }
 
-static void ram_rename(FrtStore *store, const char *from, const char *to)
-{
+static void ram_rename(FrtStore *store, const char *from, const char *to) {
     FrtRAMFile *rf = (FrtRAMFile *)frt_h_rem(store->dir.ht, from, false);
     FrtRAMFile *tmp;
 
@@ -89,14 +82,11 @@ static void ram_rename(FrtStore *store, const char *from, const char *to)
     frt_h_set(store->dir.ht, rf->name, rf);
 }
 
-static int ram_count(FrtStore *store)
-{
+static int ram_count(FrtStore *store) {
     return store->dir.ht->size;
 }
 
-static void ram_each(FrtStore *store,
-                     void (*func)(const char *fname, void *arg), void *arg)
-{
+static void ram_each(FrtStore *store, void (*func)(const char *fname, void *arg), void *arg) {
     FrtHash *ht = store->dir.ht;
     int i;
     for (i = 0; i <= ht->mask; i++) {
@@ -110,8 +100,7 @@ static void ram_each(FrtStore *store,
     }
 }
 
-static void ram_close_i(FrtStore *store)
-{
+static void ram_close_i(FrtStore *store) {
     FrtHash *ht = store->dir.ht;
     int i;
     for (i = 0; i <= ht->mask; i++) {
@@ -127,8 +116,7 @@ static void ram_close_i(FrtStore *store)
 /*
  * Be sure to keep the locks
  */
-static void ram_clear(FrtStore *store)
-{
+static void ram_clear(FrtStore *store) {
     int i;
     FrtHash *ht = store->dir.ht;
     for (i = 0; i <= ht->mask; i++) {
@@ -140,8 +128,7 @@ static void ram_clear(FrtStore *store)
     }
 }
 
-static void ram_clear_locks(FrtStore *store)
-{
+static void ram_clear_locks(FrtStore *store) {
     int i;
     FrtHash *ht = store->dir.ht;
     for (i = 0; i <= ht->mask; i++) {
@@ -153,8 +140,7 @@ static void ram_clear_locks(FrtStore *store)
     }
 }
 
-static void ram_clear_all(FrtStore *store)
-{
+static void ram_clear_all(FrtStore *store) {
     int i;
     FrtHash *ht = store->dir.ht;
     for (i = 0; i <= ht->mask; i++) {
@@ -166,8 +152,7 @@ static void ram_clear_all(FrtStore *store)
     }
 }
 
-static off_t ram_length(FrtStore *store, const char *filename)
-{
+static off_t ram_length(FrtStore *store, const char *filename) {
     FrtRAMFile *rf = (FrtRAMFile *)frt_h_get(store->dir.ht, filename);
     if (rf != NULL) {
         return rf->len;
@@ -177,8 +162,7 @@ static off_t ram_length(FrtStore *store, const char *filename)
     }
 }
 
-static void ramo_flush_i(FrtOutStream *os, const frt_uchar *src, int len)
-{
+static void ramo_flush_i(FrtOutStream *os, const frt_uchar *src, int len) {
     if (len == 0) { return; }
     frt_uchar *buffer;
     FrtRAMFile *rf = os->file.rf;
@@ -212,26 +196,22 @@ static void ramo_flush_i(FrtOutStream *os, const frt_uchar *src, int len)
     }
 }
 
-static void ramo_seek_i(FrtOutStream *os, off_t pos)
-{
+static void ramo_seek_i(FrtOutStream *os, off_t pos) {
     os->pointer = pos;
 }
 
-void frt_ramo_reset(FrtOutStream *os)
-{
+void frt_ramo_reset(FrtOutStream *os) {
     frt_os_seek(os, 0);
     os->file.rf->len = 0;
 }
 
-static void ramo_close_i(FrtOutStream *os)
-{
+static void ramo_close_i(FrtOutStream *os) {
     FrtRAMFile *rf = os->file.rf;
     FRT_DEREF(rf);
     rf_close(rf);
 }
 
-void frt_ramo_write_to(FrtOutStream *os, FrtOutStream *other_o)
-{
+void frt_ramo_write_to(FrtOutStream *os, FrtOutStream *other_o) {
     int i, len;
     FrtRAMFile *rf = os->file.rf;
     int last_buffer_number;
@@ -252,8 +232,7 @@ static const struct FrtOutStreamMethods RAM_OUT_STREAM_METHODS = {
     ramo_close_i
 };
 
-FrtOutStream *frt_ram_new_buffer()
-{
+FrtOutStream *frt_ram_new_buffer() {
     FrtRAMFile *rf = rf_new("");
     FrtOutStream *os = frt_os_new();
 
@@ -264,14 +243,12 @@ FrtOutStream *frt_ram_new_buffer()
     return os;
 }
 
-void frt_ram_destroy_buffer(FrtOutStream *os)
-{
+void frt_ram_destroy_buffer(FrtOutStream *os) {
     rf_close(os->file.rf);
     free(os);
 }
 
-static FrtOutStream *ram_new_output(FrtStore *store, const char *filename)
-{
+static FrtOutStream *ram_new_output(FrtStore *store, const char *filename) {
     FrtRAMFile *rf = (FrtRAMFile *)frt_h_get(store->dir.ht, filename);
     FrtOutStream *os = frt_os_new();
 
@@ -286,8 +263,7 @@ static FrtOutStream *ram_new_output(FrtStore *store, const char *filename)
     return os;
 }
 
-static void rami_read_i(FrtInStream *is, frt_uchar *b, int len)
-{
+static void rami_read_i(FrtInStream *is, frt_uchar *b, int len) {
     FrtRAMFile *rf = is->file.rf;
 
     int offset = 0;
@@ -317,18 +293,15 @@ static void rami_read_i(FrtInStream *is, frt_uchar *b, int len)
     is->d.pointer += len;
 }
 
-static off_t rami_length_i(FrtInStream *is)
-{
+static off_t rami_length_i(FrtInStream *is) {
     return is->file.rf->len;
 }
 
-static void rami_seek_i(FrtInStream *is, off_t pos)
-{
+static void rami_seek_i(FrtInStream *is, off_t pos) {
     is->d.pointer = pos;
 }
 
-static void rami_close_i(FrtInStream *is)
-{
+static void rami_close_i(FrtInStream *is) {
     FrtRAMFile *rf = is->file.rf;
     FRT_DEREF(rf);
     rf_close(rf);
@@ -341,8 +314,7 @@ static const struct FrtInStreamMethods RAM_IN_STREAM_METHODS = {
     rami_close_i
 };
 
-static FrtInStream *ram_open_input(FrtStore *store, const char *filename)
-{
+static FrtInStream *ram_open_input(FrtStore *store, const char *filename) {
     FrtRAMFile *rf = (FrtRAMFile *)frt_h_get(store->dir.ht, filename);
     FrtInStream *is = NULL;
 
@@ -360,8 +332,7 @@ static FrtInStream *ram_open_input(FrtStore *store, const char *filename)
 
 #define LOCK_OBTAIN_TIMEOUT 5
 
-static int ram_lock_obtain(FrtLock *lock)
-{
+static int ram_lock_obtain(FrtLock *lock) {
     int ret = true;
     if (ram_exists(lock->store, lock->name)) {
         ret = false;
@@ -370,18 +341,15 @@ static int ram_lock_obtain(FrtLock *lock)
     return ret;
 }
 
-static int ram_lock_is_locked(FrtLock *lock)
-{
+static int ram_lock_is_locked(FrtLock *lock) {
     return ram_exists(lock->store, lock->name);
 }
 
-static void ram_lock_release(FrtLock *lock)
-{
+static void ram_lock_release(FrtLock *lock) {
     ram_remove(lock->store, lock->name);
 }
 
-static FrtLock *ram_open_lock_i(FrtStore *store, const char *lockname)
-{
+static FrtLock *ram_open_lock_i(FrtStore *store, const char *lockname) {
     FrtLock *lock = FRT_ALLOC(FrtLock);
     char lname[100];
     snprintf(lname, 100, "%s%s.lck", FRT_LOCK_PREFIX, lockname);
@@ -393,16 +361,15 @@ static FrtLock *ram_open_lock_i(FrtStore *store, const char *lockname)
     return lock;
 }
 
-static void ram_close_lock_i(FrtLock *lock)
-{
+static void ram_close_lock_i(FrtLock *lock) {
     free(lock->name);
     free(lock);
 }
 
-
-FrtStore *frt_open_ram_store()
-{
-    FrtStore *new_store = frt_store_new();
+FrtStore *frt_open_ram_store(FrtStore *new_store) {
+    if (new_store == NULL)
+        new_store = frt_store_alloc();
+    frt_store_init(new_store);
 
     new_store->dir.ht       = frt_h_new_str(NULL, rf_close);
     new_store->touch        = &ram_touch;
@@ -423,13 +390,11 @@ FrtStore *frt_open_ram_store()
     return new_store;
 }
 
-struct CopyFileArg
-{
+struct CopyFileArg {
     FrtStore *to_store, *from_store;
 };
 
-static void copy_files(const char *fname, void *arg)
-{
+static void copy_files(const char *fname, void *arg) {
     struct CopyFileArg *cfa = (struct CopyFileArg *)arg;
     FrtOutStream *os = cfa->to_store->new_output(cfa->to_store, fname);
     FrtInStream *is = cfa->from_store->open_input(cfa->from_store, fname);
@@ -444,9 +409,8 @@ static void copy_files(const char *fname, void *arg)
     free(buffer);
 }
 
-FrtStore *frt_open_ram_store_and_copy(FrtStore *from_store, bool close_dir)
-{
-    FrtStore *store = frt_open_ram_store();
+FrtStore *frt_open_ram_store_and_copy(FrtStore *store, FrtStore *from_store, bool close_dir) {
+    store = frt_open_ram_store(store);
     struct CopyFileArg cfa;
     cfa.to_store = store;
     cfa.from_store = from_store;

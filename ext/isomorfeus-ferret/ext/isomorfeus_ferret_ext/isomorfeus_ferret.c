@@ -7,7 +7,6 @@
 #include "frb_threading.h"
 #include "frb_lang.h"
 
-
 /* Object Map */
 static FrtHash *object_map;
 
@@ -50,104 +49,81 @@ VALUE cStateError;
 void Init_Benchmark(void);
 void Init_Test(void);
 
-unsigned long long value_hash(const void *key)
-{
+unsigned long long value_hash(const void *key) {
     return (unsigned long long)key;
 }
 
-int value_eq(const void *key1, const void *key2)
-{
+int value_eq(const void *key1, const void *key2) {
     return key1 == key2;
 }
 
-VALUE object_get(void *key)
-{
+VALUE object_get(void *key) {
     VALUE val = (VALUE)frt_h_get(object_map, key);
     if (!val) val = Qnil;
     return val;
 }
 
-//static int hash_cnt = 0;
-void
-//object_add(void *key, VALUE obj)
-object_add2(void *key, VALUE obj, const char *file, int line)
-{
+void object_add2(void *key, VALUE obj, const char *file, int line) {
     if (frt_h_get(object_map, key))
         printf("failed adding %lx to %lld; already contains %llx. %s:%d\n",
                (long)obj, (long long)key, (long long)frt_h_get(object_map, key), file, line);
     frt_h_set(object_map, key, (void *)obj);
 }
 
-void
-//object_set(void *key, VALUE obj)
-object_set2(void *key, VALUE obj, const char *file, int line)
-{
+void object_set2(void *key, VALUE obj, const char *file, int line) {
     frt_h_set(object_map, key, (void *)obj);
 }
 
-void
-//object_del(void *key)
-object_del2(void *key, const char *file, int line)
-{
+void object_del2(void *key, const char *file, int line) {
     if (object_get(key) == Qnil)
         printf("failed deleting %lld. %s:%d\n", (long long)key, file, line);
     frt_h_del(object_map, key);
 }
 
-void frb_gc_mark(void *key)
-{
+void frb_gc_mark(void *key) {
     VALUE val = (VALUE)frt_h_get(object_map, key);
     if (val)
         rb_gc_mark(val);
 }
 
-VALUE frb_data_alloc(VALUE klass)
-{
+VALUE frb_data_alloc(VALUE klass) {
     return Frt_Make_Struct(klass);
 }
 
-void frb_deref_free(void *p)
-{
+void frb_deref_free(void *p) {
     object_del(p);
 }
 
-void frb_thread_once(int *once_control, void (*init_routine) (void))
-{
+void frb_thread_once(int *once_control, void (*init_routine) (void)) {
     if (*once_control) {
         init_routine();
         *once_control = 0;
     }
 }
 
-void frb_thread_key_create(frt_thread_key_t *key, void (*destr_function)(void *))
-{
+void frb_thread_key_create(frt_thread_key_t *key, void (*destr_function)(void *)) {
     *key = frt_h_new(&value_hash, &value_eq, NULL, destr_function);
 }
 
-void frb_thread_key_delete(frt_thread_key_t key)
-{
+void frb_thread_key_delete(frt_thread_key_t key) {
     frt_h_destroy(key);
 }
 
-void frb_thread_setspecific(frt_thread_key_t key, const void *pointer)
-{
+void frb_thread_setspecific(frt_thread_key_t key, const void *pointer) {
     frt_h_set(key, (void *)rb_thread_current(), (void *)pointer);
 }
 
-void *frb_thread_getspecific(frt_thread_key_t key)
-{
+void *frb_thread_getspecific(frt_thread_key_t key) {
     return frt_h_get(key, (void *)rb_thread_current());
 }
 
-void frb_create_dir(VALUE rpath)
-{
+void frb_create_dir(VALUE rpath) {
     VALUE mFileUtils;
     mFileUtils = rb_define_module("FileUtils");
     rb_funcall(mFileUtils, id_mkdir_p, 1, rpath);
 }
 
-VALUE frb_hs_to_rb_ary(FrtHashSet *hs)
-{
+VALUE frb_hs_to_rb_ary(FrtHashSet *hs) {
     FrtHashSetEntry *hse;
     VALUE ary = rb_ary_new();
 
@@ -157,31 +133,21 @@ VALUE frb_hs_to_rb_ary(FrtHashSet *hs)
     return ary;
 }
 
-void *frb_rb_data_ptr(VALUE val)
-{
+void *frb_rb_data_ptr(VALUE val) {
     Check_Type(val, T_DATA);
     return DATA_PTR(val);
 }
 
-char *
-rs2s(VALUE rstr)
-{
+char *rs2s(VALUE rstr) {
     return (char *)(RSTRING_PTR(rstr) ? RSTRING_PTR(rstr) : FRT_EMPTY_STRING);
 }
 
-char *
-rstrdup(VALUE rstr)
-{
+char *rstrdup(VALUE rstr) {
     char *old = rs2s(rstr);
-    //int len = RSTRING_LEN(rstr);
-    //char *new = FRT_ALLOC_N(char, len + 1);
-    //memcpy(new, old, len);
     return frt_estrdup(old);
 }
 
-FrtSymbol
-frb_field(VALUE rfield)
-{
+FrtSymbol frb_field(VALUE rfield) {
     switch (TYPE(rfield)) {
         case T_SYMBOL:
             return rb_to_id(rfield);
@@ -200,9 +166,7 @@ frb_field(VALUE rfield)
  * Jeremie 'ahFeel' BORDIER
  * ahFeel@rift.Fr
  */
-char *
-json_concat_string(char *s, char *field)
-{
+char *json_concat_string(char *s, char *field) {
     *(s++) = '"';
 	while (*field) {
 		if (*field == '"') {
@@ -220,8 +184,7 @@ json_concat_string(char *s, char *field)
 
 static VALUE error_map;
 
-VALUE frb_get_error(const char *err_type)
-{
+VALUE frb_get_error(const char *err_type) {
     VALUE error_class;
     if (Qnil != (error_class = rb_hash_aref(error_map, rb_intern(err_type)))) {
         return error_class;
@@ -283,16 +246,14 @@ void FRT_EXIT(const char *err_type, const char *fmt, ...)
 static ID id_field;
 static ID id_text;
 
-VALUE frb_get_term(FrtSymbol field, const char *text)
-{
+VALUE frb_get_term(FrtSymbol field, const char *text) {
     return rb_struct_new(cTerm,
                          ID2SYM(field),
                          rb_str_new_cstr(text),
                          NULL);
 }
 
-static VALUE frb_term_to_s(VALUE self)
-{
+static VALUE frb_term_to_s(VALUE self) {
     VALUE rstr;
     VALUE rfield = rb_funcall(self, id_field, 0);
     VALUE rtext = rb_funcall(self, id_text, 0);
@@ -311,8 +272,7 @@ static VALUE frb_term_to_s(VALUE self)
  *
  *  A Term holds a term from a document and its field name (as a Symbol).
  */
-void Init_Term(void)
-{
+void Init_Term(void) {
     const char *term_class = "Term";
     cTerm = rb_struct_define(term_class, "field", "text", NULL);
     rb_set_class_path(cTerm, mFerret, term_class);
@@ -327,14 +287,12 @@ void Init_Term(void)
  *
  *  See the README
  */
-void Init_Ferret(void)
-{
+void Init_Ferret(void) {
     Init_Term();
     rb_require("fileutils");
 }
 
-void Init_isomorfeus_ferret_ext(void)
-{
+void Init_isomorfeus_ferret_ext(void) {
     const char *const progname[] = {"ruby"};
 
     frt_init(1, progname);

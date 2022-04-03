@@ -131,10 +131,11 @@ static int maq_eq(FrtQuery *self, FrtQuery *o)
     return true;
 }
 
-FrtQuery *frt_maq_new()
-{
-    FrtQuery *self = frt_q_new(FrtQuery);
+FrtQuery *frt_maq_alloc(void) {
+    return frt_q_new(FrtQuery);
+}
 
+FrtQuery *frt_maq_init(FrtQuery *self) {
     self->type = MATCH_ALL_QUERY;
     self->to_s = &maq_to_s;
     self->hash = &maq_hash;
@@ -143,5 +144,10 @@ FrtQuery *frt_maq_new()
     self->create_weight_i = &maw_new;
 
     return self;
+}
+
+FrtQuery *frt_maq_new() {
+    FrtQuery *self = frt_maq_alloc();
+    return frt_maq_init(self);
 }
 

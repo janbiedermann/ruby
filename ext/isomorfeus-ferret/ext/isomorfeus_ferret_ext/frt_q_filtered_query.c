@@ -10,21 +10,18 @@
 #define FQSc(scorer) ((FilteredQueryScorer *)(scorer))
 #define FQQ(query) ((FrtFilteredQuery *)(query))
 
-typedef struct FilteredQueryScorer
-{
+typedef struct FilteredQueryScorer {
     FrtScorer      super;
     FrtScorer     *sub_scorer;
     FrtBitVector  *bv;
 } FilteredQueryScorer;
 
-static float fqsc_score(FrtScorer *self)
-{
+static float fqsc_score(FrtScorer *self) {
     FrtScorer *sub_sc = FQSc(self)->sub_scorer;
     return sub_sc->score(sub_sc);
 }
 
-static bool fqsc_next(FrtScorer *self)
-{
+static bool fqsc_next(FrtScorer *self) {
     FrtScorer *sub_sc = FQSc(self)->sub_scorer;
     FrtBitVector *bv = FQSc(self)->bv;
     while (sub_sc->next(sub_sc)) {
@@ -34,8 +31,7 @@ static bool fqsc_next(FrtScorer *self)
     return false;
 }
 
-static bool fqsc_skip_to(FrtScorer *self, int doc_num)
-{
+static bool fqsc_skip_to(FrtScorer *self, int doc_num) {
     FrtScorer *sub_sc = FQSc(self)->sub_scorer;
     FrtBitVector *bv = FQSc(self)->bv;
     if (sub_sc->skip_to(sub_sc, doc_num)) {
@@ -49,22 +45,19 @@ static bool fqsc_skip_to(FrtScorer *self, int doc_num)
     return false;
 }
 
-static FrtExplanation *fqsc_explain(FrtScorer *self, int doc_num)
-{
+static FrtExplanation *fqsc_explain(FrtScorer *self, int doc_num) {
     FrtScorer *sub_sc = FQSc(self)->sub_scorer;
     return sub_sc->explain(sub_sc, doc_num);
 }
 
-static void fqsc_destroy(FrtScorer *self)
-{
+static void fqsc_destroy(FrtScorer *self) {
     FilteredQueryScorer *fqsc = FQSc(self);
     fqsc->sub_scorer->destroy(fqsc->sub_scorer);
     frt_scorer_destroy_i(self);
 }
 
-static FrtScorer *fqsc_new(FrtScorer *scorer, FrtBitVector *bv, FrtSimilarity *sim)
-{
-    FrtScorer *self            = frt_scorer_new(FilteredQueryScorer, sim);
+static FrtScorer *fqsc_new(FrtScorer *scorer, FrtBitVector *bv, FrtSimilarity *sim) {
+    FrtScorer *self         = frt_scorer_new(FilteredQueryScorer, sim);
 
     FQSc(self)->sub_scorer  = scorer;
     FQSc(self)->bv          = bv;
@@ -85,43 +78,37 @@ static FrtScorer *fqsc_new(FrtScorer *scorer, FrtBitVector *bv, FrtSimilarity *s
  ***************************************************************************/
 
 #define FQW(weight) ((FilteredQueryWeight *)(weight))
-typedef struct FilteredQueryWeight
-{
+
+typedef struct FilteredQueryWeight {
     FrtWeight  super;
     FrtWeight *sub_weight;
 } FilteredQueryWeight;
 
-static char *fqw_to_s(FrtWeight *self)
-{
+static char *fqw_to_s(FrtWeight *self) {
     return frt_strfmt("FilteredQueryWeight(%f)", self->value);
 }
 
-static float fqw_sum_of_squared_weights(FrtWeight *self)
-{
+static float fqw_sum_of_squared_weights(FrtWeight *self) {
     FrtWeight *sub_weight = FQW(self)->sub_weight;
     return sub_weight->sum_of_squared_weights(sub_weight);
 }
 
-static void fqw_normalize(FrtWeight *self, float normalization_factor)
-{
+static void fqw_normalize(FrtWeight *self, float normalization_factor) {
     FrtWeight *sub_weight = FQW(self)->sub_weight;
     sub_weight->normalize(sub_weight, normalization_factor);
 }
 
-static float fqw_get_value(FrtWeight *self)
-{
+static float fqw_get_value(FrtWeight *self) {
     FrtWeight *sub_weight = FQW(self)->sub_weight;
     return sub_weight->get_value(sub_weight);
 }
 
-static FrtExplanation *fqw_explain(FrtWeight *self, FrtIndexReader *ir, int doc_num)
-{
+static FrtExplanation *fqw_explain(FrtWeight *self, FrtIndexReader *ir, int doc_num) {
     FrtWeight *sub_weight = FQW(self)->sub_weight;
     return sub_weight->explain(sub_weight, ir, doc_num);
 }
 
-static FrtScorer *fqw_scorer(FrtWeight *self, FrtIndexReader *ir)
-{
+static FrtScorer *fqw_scorer(FrtWeight *self, FrtIndexReader *ir) {
     FrtWeight *sub_weight = FQW(self)->sub_weight;
     FrtScorer *scorer = sub_weight->scorer(sub_weight, ir);
     FrtFilter *filter = FQQ(self->query)->filter;
@@ -129,15 +116,13 @@ static FrtScorer *fqw_scorer(FrtWeight *self, FrtIndexReader *ir)
     return fqsc_new(scorer, frt_filt_get_bv(filter, ir), self->similarity);
 }
 
-static void fqw_destroy(FrtWeight *self)
-{
+static void fqw_destroy(FrtWeight *self) {
     FrtWeight *sub_weight = FQW(self)->sub_weight;
     sub_weight->destroy(sub_weight);
     frt_w_destroy(self);
 }
 
-static FrtWeight *fqw_new(FrtQuery *query, FrtWeight *sub_weight, FrtSimilarity *sim)
-{
+static FrtWeight *fqw_new(FrtQuery *query, FrtWeight *sub_weight, FrtSimilarity *sim) {
     FrtWeight *self = w_new(FilteredQueryWeight, query);
 
     FQW(self)->sub_weight           = sub_weight;
@@ -163,8 +148,7 @@ static FrtWeight *fqw_new(FrtQuery *query, FrtWeight *sub_weight, FrtSimilarity 
  *
  ***************************************************************************/
 
-static char *fq_to_s(FrtQuery *self, FrtSymbol default_field)
-{
+static char *fq_to_s(FrtQuery *self, FrtSymbol default_field) {
     FrtFilteredQuery *fq = FQQ(self);
     char *filter_str = fq->filter->to_s(fq->filter);
     char *query_str = fq->query->to_s(fq->query, default_field);
@@ -179,24 +163,22 @@ static char *fq_to_s(FrtQuery *self, FrtSymbol default_field)
     return buffer;;
 }
 
-static void fq_destroy(FrtQuery *self)
-{
+static void fq_destroy(FrtQuery *self) {
     frt_filt_deref(FQQ(self)->filter);
     frt_q_deref(FQQ(self)->query);
     frt_q_destroy_i(self);
 }
 
-static FrtWeight *fq_new_weight(FrtQuery *self, FrtSearcher *searcher)
-{
+static FrtWeight *fq_new_weight(FrtQuery *self, FrtSearcher *searcher) {
     FrtQuery *sub_query = FQQ(self)->query;
-    return fqw_new(self, frt_q_weight(sub_query, searcher),
-                      searcher->similarity);
+    return fqw_new(self, frt_q_weight(sub_query, searcher), searcher->similarity);
 }
 
-FrtQuery *frt_fq_new(FrtQuery *query, FrtFilter *filter)
-{
-    FrtQuery *self = frt_q_new(FrtFilteredQuery);
+FrtQuery *frt_fq_alloc(void) {
+    return frt_q_new(FrtFilteredQuery);
+}
 
+FrtQuery *frt_fq_init(FrtQuery *self, FrtQuery *query, FrtFilter *filter) {
     FQQ(self)->query        = query;
     FQQ(self)->filter       = filter;
 
@@ -206,4 +188,9 @@ FrtQuery *frt_fq_new(FrtQuery *query, FrtFilter *filter)
     self->create_weight_i   = &fq_new_weight;
 
     return self;
+}
+
+FrtQuery *frt_fq_new(FrtQuery *query, FrtFilter *filter) {
+    FrtQuery *self = frt_fq_alloc();
+    return frt_fq_init(self, query, filter);
 }

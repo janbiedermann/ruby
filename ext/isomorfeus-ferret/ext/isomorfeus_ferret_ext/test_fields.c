@@ -160,7 +160,7 @@ static void test_fis_rw(TestCase *tc, void *data)
 {
     char *str;
     FrtFieldInfos *fis;
-    FrtStore *store = frt_open_ram_store();
+    FrtStore *store = frt_open_ram_store(NULL);
     FrtInStream *is;
     FrtOutStream *os;
     (void)data; /* suppress unused argument warning */
@@ -321,7 +321,7 @@ static FrtFieldInfos *prepare_fis()
 
 static void test_fields_rw_single(TestCase *tc, void *data)
 {
-    FrtStore *store = frt_open_ram_store();
+    FrtStore *store = frt_open_ram_store(NULL);
     char *bin_data = prepare_bin_data(BIN_DATA_LEN);
     FrtDocument *doc = prepare_doc();
     FrtFieldInfos *fis = prepare_fis();
@@ -385,7 +385,7 @@ static void test_fields_rw_single(TestCase *tc, void *data)
 static void test_fields_rw_multi(TestCase *tc, void *data)
 {
     int i;
-    FrtStore *store = frt_open_ram_store();
+    FrtStore *store = frt_open_ram_store(NULL);
     char *bin_data = prepare_bin_data(BIN_DATA_LEN);
     FrtDocument *doc;
     FrtFieldInfos *fis = prepare_fis();
@@ -464,7 +464,7 @@ static void test_fields_rw_multi(TestCase *tc, void *data)
 
 static void test_lazy_field_loading(TestCase *tc, void *data)
 {
-    FrtStore *store = frt_open_ram_store();
+    FrtStore *store = frt_open_ram_store(NULL);
     FrtDocument *doc;
     FrtFieldInfos *fis = prepare_fis();
     FrtFieldsWriter *fw;

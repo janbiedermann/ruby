@@ -82,19 +82,13 @@ int frt_filt_eq(FrtFilter *filt, FrtFilter *o)
 
 /***************************************************************************
  *
- * QueryFilter
+ * FrtQueryFilter
  *
  ***************************************************************************/
 
-#define QF(filt) ((QueryFilter *)(filt))
-typedef struct QueryFilter
-{
-    FrtFilter super;
-    FrtQuery *query;
-} QueryFilter;
+#define QF(filt) ((FrtQueryFilter *)(filt))
 
-static char *qfilt_to_s(FrtFilter *filt)
-{
+static char *qfilt_to_s(FrtFilter *filt) {
     FrtQuery *query = QF(filt)->query;
     char *query_str = query->to_s(query, (FrtSymbol)NULL);
     char *filter_str = frt_strfmt("QueryFilter< %s >", query_str);
@@ -102,8 +96,7 @@ static char *qfilt_to_s(FrtFilter *filt)
     return filter_str;
 }
 
-static FrtBitVector *qfilt_get_bv_i(FrtFilter *filt, FrtIndexReader *ir)
-{
+static FrtBitVector *qfilt_get_bv_i(FrtFilter *filt, FrtIndexReader *ir) {
     FrtBitVector *bv = frt_bv_new_capa(ir->max_doc(ir));
     FrtSearcher *sea = frt_isea_new(ir);
     FrtWeight *weight = frt_q_weight(QF(filt)->query, sea);
@@ -119,27 +112,25 @@ static FrtBitVector *qfilt_get_bv_i(FrtFilter *filt, FrtIndexReader *ir)
     return bv;
 }
 
-static unsigned long long qfilt_hash(FrtFilter *filt)
-{
+static unsigned long long qfilt_hash(FrtFilter *filt) {
     return frt_q_hash(QF(filt)->query);
 }
 
-static int qfilt_eq(FrtFilter *filt, FrtFilter *o)
-{
+static int qfilt_eq(FrtFilter *filt, FrtFilter *o) {
     return frt_q_eq(QF(filt)->query, QF(o)->query);
 }
 
-static void qfilt_destroy_i(FrtFilter *filt)
-{
+static void qfilt_destroy_i(FrtFilter *filt) {
     FrtQuery *query = QF(filt)->query;
     frt_q_deref(query);
     frt_filt_destroy_i(filt);
 }
 
-FrtFilter *frt_qfilt_new_nr(FrtQuery *query)
-{
-    FrtFilter *filt = filt_new(QueryFilter);
+FrtFilter *frt_qfilt_alloc(void) {
+    return filt_new(FrtQueryFilter);
+}
 
+FrtFilter *frt_qfilt_init_nr(FrtFilter *filt, FrtQuery *query) {
     QF(filt)->query = query;
 
     filt->get_bv_i  = &qfilt_get_bv_i;
@@ -150,8 +141,17 @@ FrtFilter *frt_qfilt_new_nr(FrtQuery *query)
     return filt;
 }
 
-FrtFilter *frt_qfilt_new(FrtQuery *query)
-{
+FrtFilter *frt_qfilt_new_nr(FrtQuery *query) {
+    FrtFilter *filt = frt_qfilt_alloc();
+    return frt_qfilt_init_nr(filt, query);
+}
+
+FrtFilter *frt_qfilt_init(FrtFilter *filt, FrtQuery *query) {
+    FRT_REF(query);
+    return frt_qfilt_init_nr(filt, query);
+}
+
+FrtFilter *frt_qfilt_new(FrtQuery *query) {
     FRT_REF(query);
     return frt_qfilt_new_nr(query);
 }

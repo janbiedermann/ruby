@@ -155,7 +155,7 @@ void test_compound_io_many_files(TestCase *tc, void *data)
 
 TestSuite *ts_compound_io(TestSuite *suite)
 {
-    FrtStore *store = frt_open_ram_store();
+    FrtStore *store = frt_open_ram_store(NULL);
 
     suite = ADD_SUITE(suite);
 

@@ -13,8 +13,7 @@
  * consistant order of positions when testing. Functionally it makes no
  * difference.
  */
-static int phrase_pos_cmp(const void *p1, const void *p2)
-{
+static int phrase_pos_cmp(const void *p1, const void *p2) {
     int pos1 = ((FrtPhrasePosition *)p1)->pos;
     int pos2 = ((FrtPhrasePosition *)p2)->pos;
     if (pos1 > pos2) {
@@ -38,17 +37,15 @@ static int phrase_pos_cmp(const void *p1, const void *p2)
  ***************************************************************************/
 
 #define PP(p) ((PhPos *)(p))
-typedef struct PhPos
-{
+typedef struct PhPos {
     FrtTermDocEnum *tpe;
-    int offset;
-    int count;
-    int doc;
-    int position;
+    int            offset;
+    int            count;
+    int            doc;
+    int            position;
 } PhPos;
 
-static bool pp_next(PhPos *self)
-{
+static bool pp_next(PhPos *self) {
     FrtTermDocEnum *tpe = self->tpe;
     assert(tpe);
 
@@ -1110,10 +1107,11 @@ static int phq_eq(FrtQuery *self, FrtQuery *o)
     return true;
 }
 
-FrtQuery *frt_phq_new(FrtSymbol field)
-{
-    FrtQuery *self = frt_q_new(FrtPhraseQuery);
+FrtQuery *frt_phq_alloc(void) {
+    return frt_q_new(FrtPhraseQuery);
+}
 
+FrtQuery *frt_phq_init(FrtQuery *self, FrtSymbol field) {
     PhQ(self)->field        = field;
     PhQ(self)->pos_cnt      = 0;
     PhQ(self)->pos_capa     = PhQ_INIT_CAPA;
@@ -1129,6 +1127,11 @@ FrtQuery *frt_phq_new(FrtSymbol field)
     self->create_weight_i   = &phw_new;
     self->get_matchv_i      = &phq_get_matchv_i;
     return self;
+}
+
+FrtQuery *frt_phq_new(FrtSymbol field) {
+    FrtQuery *self = frt_phq_alloc();
+    return frt_phq_init(self, field);
 }
 
 void frt_phq_add_term_abs(FrtQuery *self, const char *term, int position)

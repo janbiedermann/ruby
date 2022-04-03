@@ -59,14 +59,21 @@ static void frt_close_lock_i(FrtLock *lock)
 /**
  * Create a store struct initializing the mutex.
  */
-FrtStore *frt_store_new()
-{
-    FrtStore *store = FRT_ALLOC(FrtStore);
+FrtStore *frt_store_alloc() {
+    return FRT_ALLOC(FrtStore);
+}
+
+FrtStore *frt_store_init(FrtStore *store) {
     store->ref_cnt = 1;
     frt_mutex_init(&store->mutex_i, NULL);
     frt_mutex_init(&store->mutex, NULL);
     store->locks = frt_hs_new_ptr((frt_free_ft)&frt_close_lock_i);
     return store;
+}
+
+FrtStore *frt_store_new() {
+    FrtStore *store = frt_store_alloc();
+    return frt_store_init(store);
 }
 
 /**

@@ -40,7 +40,7 @@ void prepare_filter_index(FrtStore *store)
     frt_index_create(store, fis);
     frt_fis_deref(fis);
 
-    iw = frt_iw_open(store, frt_whitespace_analyzer_new(false), NULL);
+    iw = frt_iw_open(NULL, store, frt_whitespace_analyzer_new(false), NULL);
     for (i = 0; i < FILTER_DOCS_SIZE; i++) {
         FrtDocument *doc = frt_doc_new();
         doc->boost = (float)(i+1);
@@ -314,9 +314,9 @@ TestSuite *ts_filter(TestSuite *suite)
 
     suite = ADD_SUITE(suite);
 
-    store = frt_open_ram_store();
+    store = frt_open_ram_store(NULL);
     prepare_filter_index(store);
-    ir = frt_ir_open(store);
+    ir = frt_ir_open(NULL, store);
     searcher = frt_isea_new(ir);
 
     tst_run_test(suite, test_range_filter, (void *)searcher);

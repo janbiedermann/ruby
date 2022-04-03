@@ -43,7 +43,7 @@ FrtIndex *frt_index_new(FrtStore *store, FrtAnalyzer *analyzer, FrtHashSet *def_
         FRT_REF(store);
         self->store = store;
     } else {
-        self->store = frt_open_ram_store();
+        self->store = frt_open_ram_store(NULL);
         create = true;
     }
     if (analyzer) {
@@ -99,7 +99,7 @@ void frt_ensure_writer_open(FrtIndex *self)
 
         /* make sure the analzyer isn't deleted by the FrtIndexWriter */
         FRT_REF(self->analyzer);
-        self->iw = frt_iw_open(self->store, self->analyzer, false);
+        self->iw = frt_iw_open(NULL, self->store, self->analyzer, false);
         self->iw->config.use_compound_file = self->config.use_compound_file;
     }
 }
@@ -109,7 +109,7 @@ void frt_ensure_reader_open(FrtIndex *self)
     if (self->ir) {
         if (self->check_latest && !frt_ir_is_latest(self->ir)) {
             INDEX_CLOSE_READER(self);
-            self->ir = frt_ir_open(self->store);
+            self->ir = frt_ir_open(NULL, self->store);
         }
         return;
     }
@@ -117,7 +117,7 @@ void frt_ensure_reader_open(FrtIndex *self)
         frt_iw_close(self->iw);
         self->iw = NULL;
     }
-    self->ir = frt_ir_open(self->store);
+    self->ir = frt_ir_open(NULL, self->store);
 }
 
 void frt_ensure_searcher_open(FrtIndex *self)

@@ -2782,15 +2782,11 @@ void frt_qp_destroy(FrtQParser *self)
     free(self);
 }
 
-/**
- * Creates a new QueryParser setting all boolean parameters to their defaults.
- * If +def_fields+ is NULL then +all_fields+ is used in place of +def_fields+.
- * Not also that this method ensures that all fields that exist in
- * +def_fields+ must also exist in +all_fields+. This should make sense.
- */
-FrtQParser *frt_qp_new(FrtAnalyzer *analyzer)
-{
-    FrtQParser *self = FRT_ALLOC(FrtQParser);
+FrtQParser *frt_qp_alloc() {
+    return FRT_ALLOC(FrtQParser);
+}
+
+FrtQParser *frt_qp_init(FrtQParser *self, FrtAnalyzer *analyzer) {
     self->or_default = true;
     self->wild_lower = true;
     self->clean_str = false;
@@ -2816,6 +2812,17 @@ FrtQParser *frt_qp_new(FrtAnalyzer *analyzer)
     self->non_tokenizer = frt_non_tokenizer_new();
     frt_mutex_init(&self->mutex, NULL);
     return self;
+}
+
+/**
+ * Creates a new QueryParser setting all boolean parameters to their defaults.
+ * If +def_fields+ is NULL then +all_fields+ is used in place of +def_fields+.
+ * Not also that this method ensures that all fields that exist in
+ * +def_fields+ must also exist in +all_fields+. This should make sense.
+ */
+FrtQParser *frt_qp_new(FrtAnalyzer *analyzer) {
+    FrtQParser *self = frt_qp_alloc();
+    return frt_qp_init(self, analyzer);
 }
 
 void frt_qp_add_field(FrtQParser *self, FrtSymbol field, bool is_default, bool is_tokenized)
@@ -2992,7 +2999,7 @@ FrtQuery *qp_parse(FrtQParser *self, char *query_string, rb_encoding *encoding)
         rb_econv_convert(ec, &sp, (unsigned char *)query_string + query_string_len, &dp, (unsigned char *)dp + dp_length - 1, 0);
         rb_econv_close(ec);
         *dp = '\0';
-        qstr = dp_start;
+        qstr = (char *)dp_start;
     }
 
     self->recovering = self->destruct = false;

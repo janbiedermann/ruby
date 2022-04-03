@@ -1175,8 +1175,7 @@ static void bw_destroy(FrtWeight *self)
     frt_w_destroy(self);
 }
 
-static FrtExplanation *bw_explain(FrtWeight *self, FrtIndexReader *ir, int doc_num)
-{
+static FrtExplanation *bw_explain(FrtWeight *self, FrtIndexReader *ir, int doc_num) {
     FrtBooleanQuery *bq = BQ(self->query);
     FrtExplanation *sum_expl = frt_expl_new(0.0f, "sum of:");
     FrtExplanation *explanation;
@@ -1229,8 +1228,7 @@ static FrtExplanation *bw_explain(FrtWeight *self, FrtIndexReader *ir, int doc_n
     }
 }
 
-static FrtWeight *bw_new(FrtQuery *query, FrtSearcher *searcher)
-{
+static FrtWeight *bw_new(FrtQuery *query, FrtSearcher *searcher) {
     int i;
     FrtWeight *self = w_new(BooleanWeight, query);
 
@@ -1259,8 +1257,7 @@ static FrtWeight *bw_new(FrtQuery *query, FrtSearcher *searcher)
  *
  ***************************************************************************/
 
-void frt_bc_set_occur(FrtBooleanClause *self, FrtBCType occur)
-{
+void frt_bc_set_occur(FrtBooleanClause *self, FrtBCType occur) {
     self->occur = occur;
     switch (occur) {
         case FRT_BC_SHOULD:
@@ -1281,31 +1278,35 @@ void frt_bc_set_occur(FrtBooleanClause *self, FrtBCType occur)
     }
 }
 
-void frt_bc_deref(FrtBooleanClause *self)
-{
+void frt_bc_deref(FrtBooleanClause *self) {
     if (--self->ref_cnt <= 0) {
         frt_q_deref(self->query);
         free(self);
     }
 }
 
-static unsigned long long bc_hash(FrtBooleanClause *self)
-{
+static unsigned long long bc_hash(FrtBooleanClause *self) {
     return ((frt_q_hash(self->query) << 2) | self->occur);
 }
 
-static int  bc_eq(FrtBooleanClause *self, FrtBooleanClause *o)
-{
+static int  bc_eq(FrtBooleanClause *self, FrtBooleanClause *o) {
     return ((self->occur == o->occur) && frt_q_eq(self->query, o->query));
 }
 
-FrtBooleanClause *frt_bc_new(FrtQuery *query, FrtBCType occur)
-{
-    FrtBooleanClause *self = FRT_ALLOC(FrtBooleanClause);
+FrtBooleanClause *frt_bc_alloc(void) {
+    return FRT_ALLOC(FrtBooleanClause);
+}
+
+FrtBooleanClause *frt_bc_init(FrtBooleanClause *self, FrtQuery *query, FrtBCType occur) {
     self->ref_cnt = 1;
     self->query = query;
     frt_bc_set_occur(self, occur);
     return self;
+}
+
+FrtBooleanClause *frt_bc_new(FrtQuery *query, FrtBCType occur) {
+    FrtBooleanClause *self = frt_bc_alloc();
+    return frt_bc_init(self, query, occur);
 }
 
 /***************************************************************************
@@ -1314,9 +1315,7 @@ FrtBooleanClause *frt_bc_new(FrtQuery *query, FrtBCType occur)
  *
  ***************************************************************************/
 
-static FrtMatchVector *bq_get_matchv_i(FrtQuery *self, FrtMatchVector *mv,
-                                    FrtTermVector *tv)
-{
+static FrtMatchVector *bq_get_matchv_i(FrtQuery *self, FrtMatchVector *mv, FrtTermVector *tv) {
     int i;
     for (i = BQ(self)->clause_cnt - 1; i >= 0; i--) {
         if (BQ(self)->clauses[i]->occur != FRT_BC_MUST_NOT) {
@@ -1327,8 +1326,7 @@ static FrtMatchVector *bq_get_matchv_i(FrtQuery *self, FrtMatchVector *mv,
     return mv;
 }
 
-static FrtQuery *bq_rewrite(FrtQuery *self, FrtIndexReader *ir)
-{
+static FrtQuery *bq_rewrite(FrtQuery *self, FrtIndexReader *ir) {
     int i;
     const int clause_cnt = BQ(self)->clause_cnt;
     bool rewritten = false;
@@ -1397,8 +1395,7 @@ static FrtQuery *bq_rewrite(FrtQuery *self, FrtIndexReader *ir)
     return self;
 }
 
-static void bq_extract_terms(FrtQuery *self, FrtHashSet *terms)
-{
+static void bq_extract_terms(FrtQuery *self, FrtHashSet *terms) {
     int i;
     for (i = 0; i < BQ(self)->clause_cnt; i++) {
         FrtBooleanClause *clause = BQ(self)->clauses[i];
@@ -1406,8 +1403,7 @@ static void bq_extract_terms(FrtQuery *self, FrtHashSet *terms)
     }
 }
 
-static char *bq_to_s(FrtQuery *self, FrtSymbol field)
-{
+static char *bq_to_s(FrtQuery *self, FrtSymbol field) {
     int i;
     FrtBooleanClause *clause;
     FrtQuery *sub_query;
@@ -1439,8 +1435,7 @@ static char *bq_to_s(FrtQuery *self, FrtSymbol field)
         }
         if (clause->is_prohibited) {
             buffer[bp++] = '-';
-        }
-        else if (clause->is_required) {
+        } else if (clause->is_required) {
             buffer[bp++] = '+';
         }
 
@@ -1451,8 +1446,7 @@ static char *bq_to_s(FrtQuery *self, FrtSymbol field)
             memcpy(buffer + bp, clause_str, sizeof(char) * clause_len);
             bp += clause_len;
             buffer[bp++] = ')';
-        }
-        else {
+        } else {
             memcpy(buffer + bp, clause_str, sizeof(char) * clause_len);
             bp += clause_len;
         }
@@ -1471,8 +1465,7 @@ static char *bq_to_s(FrtQuery *self, FrtSymbol field)
     return buffer;
 }
 
-static void bq_destroy(FrtQuery *self)
-{
+static void bq_destroy(FrtQuery *self) {
     int i;
     for (i = 0; i < BQ(self)->clause_cnt; i++) {
         frt_bc_deref(BQ(self)->clauses[i]);
@@ -1484,14 +1477,12 @@ static void bq_destroy(FrtQuery *self)
     frt_q_destroy_i(self);
 }
 
-static float bq_coord_disabled(FrtSimilarity *sim, int overlap, int max_overlap)
-{
+static float bq_coord_disabled(FrtSimilarity *sim, int overlap, int max_overlap) {
     (void)sim; (void)overlap; (void)max_overlap;
     return 1.0;
 }
 
-static FrtSimilarity *bq_get_similarity(FrtQuery *self, FrtSearcher *searcher)
-{
+static FrtSimilarity *bq_get_similarity(FrtQuery *self, FrtSearcher *searcher) {
     if (!BQ(self)->similarity) {
         FrtSimilarity *sim = frt_q_get_similarity_i(self, searcher);
         BQ(self)->similarity = FRT_ALLOC(FrtSimilarity);
@@ -1503,8 +1494,7 @@ static FrtSimilarity *bq_get_similarity(FrtQuery *self, FrtSearcher *searcher)
     return BQ(self)->similarity;
 }
 
-static unsigned long long bq_hash(FrtQuery *self)
-{
+static unsigned long long bq_hash(FrtQuery *self) {
     int i;
     unsigned long long hash = 0;
     for (i = 0; i < BQ(self)->clause_cnt; i++) {
@@ -1513,8 +1503,7 @@ static unsigned long long bq_hash(FrtQuery *self)
     return (hash << 1) | BQ(self)->coord_disabled;
 }
 
-static int  bq_eq(FrtQuery *self, FrtQuery *o)
-{
+static int  bq_eq(FrtQuery *self, FrtQuery *o) {
     int i;
     FrtBooleanQuery *bq1 = BQ(self);
     FrtBooleanQuery *bq2 = BQ(o);
@@ -1532,9 +1521,11 @@ static int  bq_eq(FrtQuery *self, FrtQuery *o)
     return true;
 }
 
-FrtQuery *frt_bq_new(bool coord_disabled)
-{
-    FrtQuery *self = frt_q_new(FrtBooleanQuery);
+FrtQuery *frt_bq_alloc(void) {
+    return frt_q_new(FrtBooleanQuery);
+}
+
+FrtQuery *frt_bq_init(FrtQuery *self, bool coord_disabled) {
     BQ(self)->coord_disabled = coord_disabled;
     if (coord_disabled) {
         self->get_similarity = &bq_get_similarity;
@@ -1559,15 +1550,18 @@ FrtQuery *frt_bq_new(bool coord_disabled)
     return self;
 }
 
-FrtQuery *frt_bq_new_max(bool coord_disabled, int max)
-{
+FrtQuery *frt_bq_new(bool coord_disabled) {
+    FrtQuery *self = frt_bq_alloc();
+    return frt_bq_init(self, coord_disabled);
+}
+
+FrtQuery *frt_bq_new_max(bool coord_disabled, int max) {
     FrtQuery *q = frt_bq_new(coord_disabled);
     BQ(q)->max_clause_cnt = max;
     return q;
 }
 
-FrtBooleanClause *frt_bq_add_clause_nr(FrtQuery *self, FrtBooleanClause *bc)
-{
+FrtBooleanClause *frt_bq_add_clause_nr(FrtQuery *self, FrtBooleanClause *bc) {
     if (BQ(self)->clause_cnt >= BQ(self)->max_clause_cnt) {
         FRT_RAISE(FRT_STATE_ERROR, "Two many clauses. The max clause limit is set to "
               "<%d> but your query has <%d> clauses. You can try increasing "
@@ -1583,14 +1577,12 @@ FrtBooleanClause *frt_bq_add_clause_nr(FrtQuery *self, FrtBooleanClause *bc)
     return bc;
 }
 
-FrtBooleanClause *frt_bq_add_clause(FrtQuery *self, FrtBooleanClause *bc)
-{
+FrtBooleanClause *frt_bq_add_clause(FrtQuery *self, FrtBooleanClause *bc) {
     FRT_REF(bc);
     return frt_bq_add_clause_nr(self, bc);
 }
 
-FrtBooleanClause *frt_bq_add_query_nr(FrtQuery *self, FrtQuery *sub_query, FrtBCType occur)
-{
+FrtBooleanClause *frt_bq_add_query_nr(FrtQuery *self, FrtQuery *sub_query, FrtBCType occur) {
     FrtBooleanClause *bc;
     if (BQ(self)->clause_cnt >= BQ(self)->max_clause_cnt) {
         FRT_RAISE(FRT_STATE_ERROR, "Two many clauses. The max clause limit is set to "
@@ -1604,9 +1596,7 @@ FrtBooleanClause *frt_bq_add_query_nr(FrtQuery *self, FrtQuery *sub_query, FrtBC
     return bc;
 }
 
-FrtBooleanClause *frt_bq_add_query(FrtQuery *self, FrtQuery *sub_query, FrtBCType occur)
-{
+FrtBooleanClause *frt_bq_add_query(FrtQuery *self, FrtQuery *sub_query, FrtBCType occur) {
     FRT_REF(sub_query);
     return frt_bq_add_query_nr(self, sub_query, occur);
 }
-

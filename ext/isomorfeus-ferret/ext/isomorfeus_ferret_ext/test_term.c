@@ -336,7 +336,7 @@ static void test_term_infos_reader(TestCase *tc, void *data)
 
 TestSuite *ts_term(TestSuite *suite)
 {
-    FrtStore *store = frt_open_ram_store();
+    FrtStore *store = frt_open_ram_store(NULL);
 
     suite = ADD_SUITE(suite);
 

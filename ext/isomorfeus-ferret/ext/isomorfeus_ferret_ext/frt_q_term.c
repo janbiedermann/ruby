@@ -14,30 +14,27 @@
 #define SCORE_CACHE_SIZE 32
 #define TDE_READ_SIZE 32
 
-typedef struct TermScorer
-{
-    FrtScorer          super;
-    int             docs[TDE_READ_SIZE];
-    int             freqs[TDE_READ_SIZE];
-    int             pointer;
-    int             pointer_max;
-    float           score_cache[SCORE_CACHE_SIZE];
-    FrtWeight         *weight;
-    FrtTermDocEnum    *tde;
-    frt_uchar          *norms;
-    float           weight_value;
+typedef struct TermScorer {
+    FrtScorer      super;
+    int            docs[TDE_READ_SIZE];
+    int            freqs[TDE_READ_SIZE];
+    int            pointer;
+    int            pointer_max;
+    float          score_cache[SCORE_CACHE_SIZE];
+    FrtWeight      *weight;
+    FrtTermDocEnum *tde;
+    frt_uchar      *norms;
+    float          weight_value;
 } TermScorer;
 
-static float tsc_score(FrtScorer *self)
-{
+static float tsc_score(FrtScorer *self) {
     TermScorer *ts = TSc(self);
     int freq = ts->freqs[ts->pointer];
     float score;
     /* compute tf(f)*weight */
     if (freq < SCORE_CACHE_SIZE) {    /* check cache */
         score = ts->score_cache[freq];  /* cache hit */
-    }
-    else {
+    } else {
         /* cache miss */
         score = frt_sim_tf(self->similarity, (float)freq) * ts->weight_value;
     }
@@ -46,19 +43,16 @@ static float tsc_score(FrtScorer *self)
     return score;
 }
 
-static bool tsc_next(FrtScorer *self)
-{
+static bool tsc_next(FrtScorer *self) {
     TermScorer *ts = TSc(self);
 
     ts->pointer++;
     if (ts->pointer >= ts->pointer_max) {
         /* refill buffer */
-        ts->pointer_max = ts->tde->read(ts->tde, ts->docs, ts->freqs,
-                                        TDE_READ_SIZE);
+        ts->pointer_max = ts->tde->read(ts->tde, ts->docs, ts->freqs, TDE_READ_SIZE);
         if (ts->pointer_max != 0) {
             ts->pointer = 0;
-        }
-        else {
+        } else {
             return false;
         }
     }
@@ -66,8 +60,7 @@ static bool tsc_next(FrtScorer *self)
     return true;
 }
 
-static bool tsc_skip_to(FrtScorer *self, int doc_num)
-{
+static bool tsc_skip_to(FrtScorer *self, int doc_num) {
     TermScorer *ts = TSc(self);
     FrtTermDocEnum *tde = ts->tde;
 
@@ -86,14 +79,12 @@ static bool tsc_skip_to(FrtScorer *self, int doc_num)
         ts->docs[0] = self->doc = tde->doc_num(tde);
         ts->freqs[0] = tde->freq(tde);
         return true;
-    }
-    else {
+    } else {
         return false;
     }
 }
 
-static FrtExplanation *tsc_explain(FrtScorer *self, int doc_num)
-{
+static FrtExplanation *tsc_explain(FrtScorer *self, int doc_num) {
     TermScorer *ts = TSc(self);
     FrtQuery *query = ts->weight->get_query(ts->weight);
     int tf = 0;
@@ -107,14 +98,12 @@ static FrtExplanation *tsc_explain(FrtScorer *self, int doc_num)
                     rb_id2name(TQ(query)->field), TQ(query)->term, tf);
 }
 
-static void tsc_destroy(FrtScorer *self)
-{
+static void tsc_destroy(FrtScorer *self) {
     TSc(self)->tde->close(TSc(self)->tde);
     frt_scorer_destroy_i(self);
 }
 
-static FrtScorer *tsc_new(FrtWeight *weight, FrtTermDocEnum *tde, frt_uchar *norms)
-{
+static FrtScorer *tsc_new(FrtWeight *weight, FrtTermDocEnum *tde, frt_uchar *norms) {
     int i;
     FrtScorer *self            = frt_scorer_new(TermScorer, weight->similarity);
     TSc(self)->weight       = weight;
@@ -141,8 +130,7 @@ static FrtScorer *tsc_new(FrtWeight *weight, FrtTermDocEnum *tde, frt_uchar *nor
  *
  ***************************************************************************/
 
-static FrtScorer *tw_scorer(FrtWeight *self, FrtIndexReader *ir)
-{
+static FrtScorer *tw_scorer(FrtWeight *self, FrtIndexReader *ir) {
     FrtTermQuery *tq = TQ(self->query);
     FrtTermDocEnum *tde = ir_term_docs_for(ir, tq->field, tq->term);
     /* ir_term_docs_for should always return a TermDocEnum */
@@ -151,8 +139,7 @@ static FrtScorer *tw_scorer(FrtWeight *self, FrtIndexReader *ir)
     return tsc_new(self, tde, frt_ir_get_norms(ir, tq->field));
 }
 
-static FrtExplanation *tw_explain(FrtWeight *self, FrtIndexReader *ir, int doc_num)
-{
+static FrtExplanation *tw_explain(FrtWeight *self, FrtIndexReader *ir, int doc_num) {
     FrtExplanation *qnorm_expl;
     FrtExplanation *field_expl;
     FrtScorer *scorer;
@@ -203,14 +190,12 @@ static FrtExplanation *tw_explain(FrtWeight *self, FrtIndexReader *ir, int doc_n
     }
 }
 
-static char *tw_to_s(FrtWeight *self)
-{
+static char *tw_to_s(FrtWeight *self) {
     return frt_strfmt("TermWeight(%f)", self->value);
 }
 
-static FrtWeight *tw_new(FrtQuery *query, FrtSearcher *searcher)
-{
-    FrtWeight *self    = w_new(FrtWeight, query);
+static FrtWeight *tw_new(FrtQuery *query, FrtSearcher *searcher) {
+    FrtWeight *self = w_new(FrtWeight, query);
     self->scorer    = &tw_scorer;
     self->explain   = &tw_explain;
     self->to_s      = &tw_to_s;
@@ -231,14 +216,12 @@ static FrtWeight *tw_new(FrtQuery *query, FrtSearcher *searcher)
  *
  ***************************************************************************/
 
-static void tq_destroy(FrtQuery *self)
-{
+static void tq_destroy(FrtQuery *self) {
     free(TQ(self)->term);
     frt_q_destroy_i(self);
 }
 
-static char *tq_to_s(FrtQuery *self, FrtSymbol default_field)
-{
+static char *tq_to_s(FrtQuery *self, FrtSymbol default_field) {
     const char *field_name = rb_id2name(TQ(self)->field);
     size_t flen = strlen(field_name);
     const char *term = TQ(self)->term;
@@ -260,25 +243,19 @@ static char *tq_to_s(FrtQuery *self, FrtSymbol default_field)
     return buffer;
 }
 
-static void tq_extract_terms(FrtQuery *self, FrtHashSet *terms)
-{
+static void tq_extract_terms(FrtQuery *self, FrtHashSet *terms) {
     frt_hs_add(terms, frt_term_new(TQ(self)->field, TQ(self)->term));
 }
 
-static unsigned long long tq_hash(FrtQuery *self)
-{
+static unsigned long long tq_hash(FrtQuery *self) {
     return frt_str_hash(TQ(self)->term) ^ frt_str_hash(rb_id2name(TQ(self)->field));
 }
 
-static int tq_eq(FrtQuery *self, FrtQuery *o)
-{
-    return (strcmp(TQ(self)->term, TQ(o)->term) == 0)
-        && (TQ(self)->field == TQ(o)->field);
+static int tq_eq(FrtQuery *self, FrtQuery *o) {
+    return (strcmp(TQ(self)->term, TQ(o)->term) == 0) && (TQ(self)->field == TQ(o)->field);
 }
 
-static FrtMatchVector *tq_get_matchv_i(FrtQuery *self, FrtMatchVector *mv,
-                                    FrtTermVector *tv)
-{
+static FrtMatchVector *tq_get_matchv_i(FrtQuery *self, FrtMatchVector *mv, FrtTermVector *tv) {
     if (tv->field == TQ(self)->field) {
         int i;
         FrtTVTerm *tv_term = frt_tv_get_tv_term(tv, TQ(self)->term);
@@ -292,9 +269,11 @@ static FrtMatchVector *tq_get_matchv_i(FrtQuery *self, FrtMatchVector *mv,
     return mv;
 }
 
-FrtQuery *frt_tq_new(FrtSymbol field, const char *term)
-{
-    FrtQuery *self          = frt_q_new(FrtTermQuery);
+FrtQuery *frt_tq_alloc(void) {
+    return frt_q_new(FrtTermQuery);
+}
+
+FrtQuery *frt_tq_init(FrtQuery *self, FrtSymbol field, const char *term) {
     TQ(self)->field         = field;
     TQ(self)->term          = frt_estrdup(term);
     self->type              = TERM_QUERY;
@@ -308,4 +287,9 @@ FrtQuery *frt_tq_new(FrtSymbol field, const char *term)
     self->get_matchv_i      = &tq_get_matchv_i;
 
     return self;
+}
+
+FrtQuery *frt_tq_new(FrtSymbol field, const char *term) {
+    FrtQuery *self          = frt_tq_alloc();
+    return frt_tq_init(self, field, term);
 }

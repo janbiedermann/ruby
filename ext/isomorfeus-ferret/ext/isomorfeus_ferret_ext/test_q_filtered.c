@@ -40,7 +40,7 @@ static void test_filtered_query(TestCase *tc, void *data)
 
 TestSuite *ts_q_filtered(TestSuite *suite)
 {
-    FrtStore *store = frt_open_ram_store();
+    FrtStore *store = frt_open_ram_store(NULL);
     FrtIndexReader *ir;
     FrtSearcher *searcher;
 
@@ -50,7 +50,7 @@ TestSuite *ts_q_filtered(TestSuite *suite)
     suite = ADD_SUITE(suite);
 
     prepare_filter_index(store);
-    ir = frt_ir_open(store);
+    ir = frt_ir_open(NULL, store);
     searcher = frt_isea_new(ir);
 
     tst_run_test(suite, test_filtered_query, (void *)searcher);

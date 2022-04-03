@@ -488,7 +488,7 @@ static void do_standard_tokenizer(TestCase *tc, FrtTokenStream *ts)
 
 static void test_standard_tokenizer(TestCase *tc, void *data)
 {
-    FrtTokenStream *ts = frt_standard_tokenizer_new();
+    FrtTokenStream *ts = frt_standard_tokenizer_new(false);
     (void)data;
     do_standard_tokenizer(tc, ts);
     frt_ts_deref(ts);
@@ -496,7 +496,7 @@ static void test_standard_tokenizer(TestCase *tc, void *data)
 
 static void test_legacy_standard_tokenizer(TestCase *tc, void *data)
 {
-    FrtTokenStream *ts = frt_standard_tokenizer_new();
+    FrtTokenStream *ts = frt_standard_tokenizer_new(false);
     (void)data;
     do_standard_tokenizer(tc, ts);
     frt_ts_deref(ts);
@@ -579,7 +579,7 @@ static void do_mb_standard_tokenizer(TestCase *tc, FrtTokenStream *ts)
 
 static void test_mb_standard_tokenizer(TestCase *tc, void *data)
 {
-    FrtTokenStream *ts = frt_standard_tokenizer_new();
+    FrtTokenStream *ts = frt_standard_tokenizer_new(false);
     (void)data;
     do_mb_standard_tokenizer(tc, ts);
     frt_ts_deref(ts);
@@ -587,7 +587,7 @@ static void test_mb_standard_tokenizer(TestCase *tc, void *data)
 
 static void test_mb_legacy_standard_tokenizer(TestCase *tc, void *data)
 {
-    FrtTokenStream *ts = frt_standard_tokenizer_new();
+    FrtTokenStream *ts = frt_standard_tokenizer_new(false);
     (void)data;
     do_mb_standard_tokenizer(tc, ts);
     frt_ts_deref(ts);
@@ -596,7 +596,7 @@ static void test_mb_legacy_standard_tokenizer(TestCase *tc, void *data)
 static void test_standard_analyzer(TestCase *tc, void *data)
 {
     FrtToken *tk = frt_tk_new();
-    FrtAnalyzer *a = frt_standard_analyzer_new_with_words(FRT_ENGLISH_STOP_WORDS, true);
+    FrtAnalyzer *a = frt_standard_analyzer_new_with_words(true, FRT_ENGLISH_STOP_WORDS);
     char text[200] =
         "DBalmain@gmail.com is My e-mail and the Address. -23!$ "
         "http://www.google.com/results/ T.N.T. 123-1235-ASD-1234";
@@ -624,7 +624,7 @@ static void test_mb_standard_analyzer(TestCase *tc, void *data)
 {
     FrtToken *tk = frt_tk_new();
     FrtAnalyzer *a =
-        frt_standard_analyzer_new_with_words(FRT_ENGLISH_STOP_WORDS, false);
+        frt_standard_analyzer_new_with_words(false, FRT_ENGLISH_STOP_WORDS);
     const char *words[] = { "is", "the", "-23", "tnt", NULL };
     char text[200] =
         "DBalmain@gmail.com is My e-mail and the Address. -23!$ "
@@ -671,7 +671,7 @@ static void test_mb_standard_analyzer(TestCase *tc, void *data)
     Assert(frt_ts_next(ts) == NULL, "Should be no more tokens");
     frt_ts_deref(ts);
     frt_a_deref(a);
-    a = frt_standard_analyzer_new_with_words(words, true);
+    a = frt_standard_analyzer_new_with_words(true, words);
     ts = frt_a_get_ts(a, rb_intern("random"), text, enc);
     ts2 = frt_a_get_ts(a, rb_intern("random"), text, enc);
     test_token_pi(frt_ts_next(ts), "dbalmain@gmail.com", 0, 18, 1, enc);
@@ -723,7 +723,7 @@ static void test_legacy_standard_analyzer(TestCase *tc, void *data)
 {
     FrtToken *tk = frt_tk_new();
     FrtAnalyzer *a =
-        frt_standard_analyzer_new_with_words(FRT_ENGLISH_STOP_WORDS, true);
+        frt_standard_analyzer_new_with_words(true, FRT_ENGLISH_STOP_WORDS);
     char text[200] =
         "DBalmain@gmail.com is My e-mail and the Address. -23!$ "
         "http://www.google.com/results/ T.N.T. 123-1235-ASD-1234";
@@ -751,7 +751,7 @@ static void test_mb_legacy_standard_analyzer(TestCase *tc, void *data)
 {
     FrtToken *tk = frt_tk_new();
     FrtAnalyzer *a =
-        frt_standard_analyzer_new_with_words(FRT_ENGLISH_STOP_WORDS, false);
+        frt_standard_analyzer_new_with_words(false, FRT_ENGLISH_STOP_WORDS);
     const char *words[] = { "is", "the", "-23", "tnt", NULL };
     char text[200] =
         "DBalmain@gmail.com is My e-mail and the Address. -23!$ "
@@ -798,7 +798,7 @@ static void test_mb_legacy_standard_analyzer(TestCase *tc, void *data)
     Assert(frt_ts_next(ts) == NULL, "Should be no more tokens");
     frt_ts_deref(ts);
     frt_a_deref(a);
-    a = frt_standard_analyzer_new_with_words(words, true);
+    a = frt_standard_analyzer_new_with_words(true, words);
     ts = frt_a_get_ts(a, rb_intern("random"), text, enc);
     ts2 = frt_a_get_ts(a, rb_intern("random"), text, enc);
     test_token_pi(frt_ts_next(ts), "dbalmain@gmail.com", 0, 18, 1, enc);
@@ -849,7 +849,7 @@ static void test_mb_legacy_standard_analyzer(TestCase *tc, void *data)
 static void test_long_word(TestCase *tc, void *data)
 {
     FrtToken *tk = frt_tk_new();
-    FrtAnalyzer *a = frt_standard_analyzer_new_with_words(FRT_ENGLISH_STOP_WORDS, true);
+    FrtAnalyzer *a = frt_standard_analyzer_new_with_words(true, FRT_ENGLISH_STOP_WORDS);
     char text[400] =
         "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
         "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
@@ -871,7 +871,7 @@ static void test_long_word(TestCase *tc, void *data)
     Assert(frt_ts_next(ts) == NULL, "Should be no more tokens");
     frt_ts_deref(ts);
     frt_a_deref(a);
-    a = frt_standard_analyzer_new_with_words(FRT_ENGLISH_STOP_WORDS, true);
+    a = frt_standard_analyzer_new_with_words(true, FRT_ENGLISH_STOP_WORDS);
     ts = frt_a_get_ts(a, rb_intern("random"), text, enc);
     test_token_pi(frt_ts_next(ts), text_a, 0, 290, 1, enc);
     test_token_pi(frt_ts_next(ts), "two", 291, 294, 1, enc);
@@ -890,7 +890,7 @@ static void test_long_word(TestCase *tc, void *data)
 static void test_lowercase_filter(TestCase *tc, void *data)
 {
     FrtToken *tk = frt_tk_new();
-    FrtTokenStream *ts = frt_lowercase_filter_new(frt_standard_tokenizer_new());
+    FrtTokenStream *ts = frt_standard_tokenizer_new(true);
     char text[200] =
         "DBalmain@gmail.com is My e-mail 52   #$ Address. -23!$ http://www.google.com/results/ T.N.T. 123-1235-ASD-1234";
     (void)data;
@@ -918,7 +918,7 @@ static void test_lowercase_filter(TestCase *tc, void *data)
 static void test_hyphen_filter(TestCase *tc, void *data)
 {
     FrtToken *tk = frt_tk_new();
-    FrtTokenStream *ts = frt_hyphen_filter_new(frt_lowercase_filter_new(frt_standard_tokenizer_new()));
+    FrtTokenStream *ts = frt_hyphen_filter_new(frt_standard_tokenizer_new(true));
     char text[200] =
         "DBalmain@gmail.com is My e-mail 52   #$ Address. -23!$ http://www.google.com/results/ T.N.T. 123-1235-ASD-1234 long-hyph-en-at-ed-word";
     (void)data;

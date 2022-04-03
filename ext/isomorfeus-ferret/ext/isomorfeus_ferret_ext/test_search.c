@@ -137,7 +137,7 @@ static FrtTokenStream *dbl_tf_clone_i(FrtTokenStream *ts)
 
 static FrtTokenStream *dbl_tf_new(FrtTokenStream *sub_ts)
 {
-    FrtTokenStream *ts = tf_new(DoubleFilter, sub_ts);
+    FrtTokenStream *ts = frt_tf_new_i(sizeof(DoubleFilter), sub_ts);
     ts->next           = &dbl_tf_next;
     ts->clone_i        = &dbl_tf_clone_i;
     return ts;
@@ -213,7 +213,7 @@ static void prepare_search_index(FrtStore *store)
     frt_fis_deref(fis);
     rb_encoding *enc = rb_enc_find("ASCII-8BIT");
 
-    iw = frt_iw_open(store, dbl_analyzer_new(), NULL);
+    iw = frt_iw_open(NULL, store, dbl_analyzer_new(), NULL);
     for (i = 0; i < SEARCH_DOCS_SIZE; i++) {
         FrtDocument *doc = frt_doc_new();
         doc->boost = (float)(i+1);
@@ -1638,7 +1638,7 @@ static void test_search_unscored(TestCase *tc, void *data)
 
 TestSuite *ts_search(TestSuite *suite)
 {
-    FrtStore *store = frt_open_ram_store();
+    FrtStore *store = frt_open_ram_store(NULL);
     FrtIndexReader *ir;
     FrtSearcher *searcher;
 
@@ -1654,7 +1654,7 @@ TestSuite *ts_search(TestSuite *suite)
     tst_run_test(suite, test_default_similarity, NULL);
 
     prepare_search_index(store);
-    ir = frt_ir_open(store);
+    ir = frt_ir_open(NULL, store);
     searcher = frt_isea_new(ir);
 
     tst_run_test(suite, test_get_doc, (void *)searcher);
@@ -1712,7 +1712,7 @@ static void prepare_multi_search_index(FrtStore *store, struct Data data[],
     frt_fis_deref(fis);
     rb_encoding *enc = rb_enc_find("ASCII-8BIT");
 
-    iw = frt_iw_open(store, dbl_analyzer_new(), NULL);
+    iw = frt_iw_open(NULL, store, dbl_analyzer_new(), NULL);
     for (i = 0; i < d_cnt; i++) {
         FrtDocument *doc = frt_doc_new();
         doc->boost = (float)(i+w);
@@ -1828,8 +1828,8 @@ static void test_query_combine(TestCase *tc, void *data)
 
 TestSuite *ts_multi_search(TestSuite *suite)
 {
-    FrtStore *store0 = frt_open_ram_store();
-    FrtStore *store1 = frt_open_ram_store();
+    FrtStore *store0 = frt_open_ram_store(NULL);
+    FrtStore *store1 = frt_open_ram_store(NULL);
 
     FrtIndexReader *ir0, *ir1;
     FrtSearcher **searchers;
@@ -1845,8 +1845,8 @@ TestSuite *ts_multi_search(TestSuite *suite)
     prepare_multi_search_index(store0, test_data, 9, 1);
     prepare_multi_search_index(store1, test_data + 9, FRT_NELEMS(test_data) - 9, 10);
 
-    ir0 = frt_ir_open(store0);
-    ir1 = frt_ir_open(store1);
+    ir0 = frt_ir_open(NULL, store0);
+    ir1 = frt_ir_open(NULL, store1);
     searchers = FRT_ALLOC_N(FrtSearcher *, 2);
     searchers[0] = frt_isea_new(ir0);
     searchers[1] = frt_isea_new(ir1);

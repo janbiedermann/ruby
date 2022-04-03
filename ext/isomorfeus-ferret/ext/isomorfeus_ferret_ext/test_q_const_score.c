@@ -63,7 +63,7 @@ static void test_const_score_query_hash(TestCase *tc, void *data)
 
 TestSuite *ts_q_const_score(TestSuite *suite)
 {
-    FrtStore *store = frt_open_ram_store();
+    FrtStore *store = frt_open_ram_store(NULL);
     FrtIndexReader *ir;
     FrtSearcher *searcher;
 
@@ -72,7 +72,7 @@ TestSuite *ts_q_const_score(TestSuite *suite)
     suite = ADD_SUITE(suite);
 
     prepare_filter_index(store);
-    ir = frt_ir_open(store);
+    ir = frt_ir_open(NULL, store);
     searcher = frt_isea_new(ir);
 
     tst_run_test(suite, test_const_score_query, (void *)searcher);

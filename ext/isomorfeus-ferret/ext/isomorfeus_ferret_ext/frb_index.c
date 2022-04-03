@@ -1,7 +1,8 @@
 #include "frt_index.h"
 #include "isomorfeus_ferret.h"
-#include <ruby/st.h>
-#include <ruby/encoding.h>
+#include <ruby.h>
+
+#undef close
 
 VALUE mIndex;
 
@@ -153,15 +154,25 @@ frb_fi_get_params(VALUE roptions,
     }
 }
 
-static VALUE
-frb_get_field_info(FrtFieldInfo *fi)
-{
+const size_t frb_fi_size(const void *p) {
+    return sizeof(FrtFieldInfo);
+    (void)p;
+}
 
+const rb_data_type_t frb_field_info_t = {
+    .wrap_struct_name = "FrbFieldInfo",
+    .function = {
+        .dfree = frb_fi_free,
+        .dsize = frb_fi_size
+    },
+};
+
+static VALUE frb_get_field_info(FrtFieldInfo *fi) {
     VALUE rfi = Qnil;
     if (fi) {
         rfi = object_get(fi);
         if (rfi == Qnil) {
-            rfi = Data_Wrap_Struct(cFieldInfo, NULL, &frb_fi_free, fi);
+            rfi = TypedData_Wrap_Struct(cFieldInfo, &frb_field_info_t, fi);
             FRT_REF(fi);
             object_add(fi, rfi);
         }
@@ -178,11 +189,15 @@ frb_get_field_info(FrtFieldInfo *fi)
  *  :term_vector, :boost]. See the description of FieldInfo for more
  *  information on these properties.
  */
-static VALUE
-frb_fi_init(int argc, VALUE *argv, VALUE self)
-{
+static VALUE frb_fi_alloc(VALUE rclass) {
+    FrtFieldInfo *fi = frt_fi_alloc();
+    return TypedData_Wrap_Struct(rclass, &frb_field_info_t, fi);
+}
+
+static VALUE frb_fi_init(int argc, VALUE *argv, VALUE self) {
     VALUE roptions, rname;
     FrtFieldInfo *fi;
+    TypedData_Get_Struct(self, FrtFieldInfo, &frb_field_info_t, fi);
     FrtStoreValue store = FRT_STORE_YES;
     FrtIndexValue index = FRT_INDEX_YES;
     FrtTermVectorValue term_vector = FRT_TERM_VECTOR_WITH_POSITIONS_OFFSETS;
@@ -192,9 +207,8 @@ frb_fi_init(int argc, VALUE *argv, VALUE self)
     if (argc > 1) {
         frb_fi_get_params(roptions, &store, &index, &term_vector, &boost);
     }
-    fi = frt_fi_new(frb_field(rname), store, index, term_vector);
+    fi = frt_fi_init(fi, frb_field(rname), store, index, term_vector);
     fi->boost = boost;
-    Frt_Wrap_Struct(self, NULL, &frb_fi_free, fi);
     object_add(fi, self);
     return self;
 }
@@ -205,9 +219,7 @@ frb_fi_init(int argc, VALUE *argv, VALUE self)
  *
  *  Return the name of the field
  */
-static VALUE
-frb_fi_name(VALUE self)
-{
+static VALUE frb_fi_name(VALUE self) {
     FrtFieldInfo *fi = (FrtFieldInfo *)DATA_PTR(self);
     return rb_str_new_cstr(rb_id2name(fi->name));
 }
@@ -218,9 +230,7 @@ frb_fi_name(VALUE self)
  *
  *  Return true if the field is stored in the index.
  */
-static VALUE
-frb_fi_is_stored(VALUE self)
-{
+static VALUE frb_fi_is_stored(VALUE self) {
     FrtFieldInfo *fi = (FrtFieldInfo *)DATA_PTR(self);
     return fi_is_stored(fi) ? Qtrue : Qfalse;
 }
@@ -231,9 +241,7 @@ frb_fi_is_stored(VALUE self)
  *
  *  Return true if the field is stored in the index in compressed format.
  */
-static VALUE
-frb_fi_is_compressed(VALUE self)
-{
+static VALUE frb_fi_is_compressed(VALUE self) {
     FrtFieldInfo *fi = (FrtFieldInfo *)DATA_PTR(self);
     return fi_is_compressed(fi) ? Qtrue : Qfalse;
 }
@@ -244,9 +252,7 @@ frb_fi_is_compressed(VALUE self)
  *
  *  Return true if the field is indexed, ie searchable in the index.
  */
-static VALUE
-frb_fi_is_indexed(VALUE self)
-{
+static VALUE frb_fi_is_indexed(VALUE self) {
     FrtFieldInfo *fi = (FrtFieldInfo *)DATA_PTR(self);
     return fi_is_indexed(fi) ? Qtrue : Qfalse;
 }
@@ -262,9 +268,7 @@ frb_fi_is_indexed(VALUE self)
  *
  *  A field can only be tokenized if it is indexed.
  */
-static VALUE
-frb_fi_is_tokenized(VALUE self)
-{
+static VALUE frb_fi_is_tokenized(VALUE self) {
     FrtFieldInfo *fi = (FrtFieldInfo *)DATA_PTR(self);
     return fi_is_tokenized(fi) ? Qtrue : Qfalse;
 }
@@ -280,9 +284,7 @@ frb_fi_is_tokenized(VALUE self)
  *  boost and it will use less memory, especially for indexes which have a
  *  large number of documents.
  */
-static VALUE
-frb_fi_omit_norms(VALUE self)
-{
+static VALUE frb_fi_omit_norms(VALUE self) {
     FrtFieldInfo *fi = (FrtFieldInfo *)DATA_PTR(self);
     return fi_omit_norms(fi) ? Qtrue : Qfalse;
 }
@@ -293,9 +295,7 @@ frb_fi_omit_norms(VALUE self)
  *
  *  Return true if the term-vectors are stored for this field.
  */
-static VALUE
-frb_fi_store_term_vector(VALUE self)
-{
+static VALUE frb_fi_store_term_vector(VALUE self) {
     FrtFieldInfo *fi = (FrtFieldInfo *)DATA_PTR(self);
     return fi_store_term_vector(fi) ? Qtrue : Qfalse;
 }
@@ -306,9 +306,7 @@ frb_fi_store_term_vector(VALUE self)
  *
  *  Return true if positions are stored with the term-vectors for this field.
  */
-static VALUE
-frb_fi_store_positions(VALUE self)
-{
+static VALUE frb_fi_store_positions(VALUE self) {
     FrtFieldInfo *fi = (FrtFieldInfo *)DATA_PTR(self);
     return fi_store_positions(fi) ? Qtrue : Qfalse;
 }
@@ -319,9 +317,7 @@ frb_fi_store_positions(VALUE self)
  *
  *  Return true if offsets are stored with the term-vectors for this field.
  */
-static VALUE
-frb_fi_store_offsets(VALUE self)
-{
+static VALUE frb_fi_store_offsets(VALUE self) {
     FrtFieldInfo *fi = (FrtFieldInfo *)DATA_PTR(self);
     return fi_store_offsets(fi) ? Qtrue : Qfalse;
 }
@@ -334,9 +330,7 @@ frb_fi_store_offsets(VALUE self)
  *
  *    fi.indexed? and not fi.omit_norms?
  */
-static VALUE
-frb_fi_has_norms(VALUE self)
-{
+static VALUE frb_fi_has_norms(VALUE self) {
     FrtFieldInfo *fi = (FrtFieldInfo *)DATA_PTR(self);
     return fi_has_norms(fi) ? Qtrue : Qfalse;
 }
@@ -347,9 +341,7 @@ frb_fi_has_norms(VALUE self)
  *
  *  Return the default boost for this field
  */
-static VALUE
-frb_fi_boost(VALUE self)
-{
+static VALUE frb_fi_boost(VALUE self) {
     FrtFieldInfo *fi = (FrtFieldInfo *)DATA_PTR(self);
     return rb_float_new((double)fi->boost);
 }
@@ -360,9 +352,7 @@ frb_fi_boost(VALUE self)
  *
  *  Return a string representation of the FieldInfo object.
  */
-static VALUE
-frb_fi_to_s(VALUE self)
-{
+static VALUE frb_fi_to_s(VALUE self) {
     FrtFieldInfo *fi = (FrtFieldInfo *)DATA_PTR(self);
     char *fi_s = frt_fi_to_s(fi);
     VALUE rfi_s = rb_str_new2(fi_s);
@@ -376,16 +366,12 @@ frb_fi_to_s(VALUE self)
  *
  ****************************************************************************/
 
-static void
-frb_fis_free(void *p)
-{
+static void frb_fis_free(void *p) {
     object_del(p);
     frt_fis_deref((FrtFieldInfos *)p);
 }
 
-static void
-frb_fis_mark(void *p)
-{
+static void frb_fis_mark(void *p) {
     int i;
     FrtFieldInfos *fis = (FrtFieldInfos *)p;
 
@@ -394,16 +380,26 @@ frb_fis_mark(void *p)
     }
 }
 
-static VALUE
-frb_get_field_infos(FrtFieldInfos *fis)
-{
+const size_t frb_field_infos_t_size(const void *p) {
+    return sizeof(FrtFieldInfos);
+    (void)p;
+}
 
+const rb_data_type_t frb_field_infos_t = {
+    .wrap_struct_name = "FrbFieldInfos",
+    .function = {
+        .dmark = frb_fis_mark,
+        .dfree = frb_fis_free,
+        .dsize = frb_field_infos_t_size
+    }
+};
+
+static VALUE frb_get_field_infos(FrtFieldInfos *fis) {
     VALUE rfis = Qnil;
     if (fis) {
         rfis = object_get(fis);
         if (rfis == Qnil) {
-            rfis = Data_Wrap_Struct(cFieldInfos, &frb_fis_mark, &frb_fis_free,
-                                    fis);
+            rfis = TypedData_Wrap_Struct(cFieldInfos, &frb_field_infos_t, fis);
             FRT_REF(fis);
             object_add(fis, rfis);
         }
@@ -419,11 +415,16 @@ frb_get_field_infos(FrtFieldInfos *fis)
  *  specified in the +default+ hash parameter. See FieldInfo for available
  *  property values.
  */
-static VALUE
-frb_fis_init(int argc, VALUE *argv, VALUE self)
-{
+
+static VALUE frb_fis_alloc(VALUE rclass) {
+    FrtFieldInfos *fis = frt_fis_alloc();
+    return TypedData_Wrap_Struct(rclass, &frb_field_infos_t, fis);
+}
+
+static VALUE frb_fis_init(int argc, VALUE *argv, VALUE self) {
     VALUE roptions;
     FrtFieldInfos *fis;
+    TypedData_Get_Struct(self, FrtFieldInfos, &frb_field_infos_t, fis);
     FrtStoreValue store = FRT_STORE_YES;
     FrtIndexValue index = FRT_INDEX_YES;
     FrtTermVectorValue term_vector = FRT_TERM_VECTOR_WITH_POSITIONS_OFFSETS;
@@ -433,8 +434,7 @@ frb_fis_init(int argc, VALUE *argv, VALUE self)
     if (argc > 0) {
         frb_fi_get_params(roptions, &store, &index, &term_vector, &boost);
     }
-    fis = frt_fis_new(store, index, term_vector);
-    Frt_Wrap_Struct(self, &frb_fis_mark, &frb_fis_free, fis);
+    fis = frt_fis_init(fis, store, index, term_vector);
     object_add(fis, self);
     return self;
 }
@@ -446,9 +446,7 @@ frb_fis_init(int argc, VALUE *argv, VALUE self)
  *  Return an array of the FieldInfo objects contained but this FieldInfos
  *  object.
  */
-static VALUE
-frb_fis_to_a(VALUE self)
-{
+static VALUE frb_fis_to_a(VALUE self) {
     FrtFieldInfos *fis = (FrtFieldInfos *)DATA_PTR(self);
     VALUE rary = rb_ary_new();
     int i;
@@ -471,9 +469,7 @@ frb_fis_to_a(VALUE self)
  *    fi = fis[:name]
  *    fi = fis[2]
  */
-static VALUE
-frb_fis_get(VALUE self, VALUE ridx)
-{
+static VALUE frb_fis_get(VALUE self, VALUE ridx) {
     FrtFieldInfos *fis = (FrtFieldInfos *)DATA_PTR(self);
     VALUE rfi = Qnil;
     switch (TYPE(ridx)) {
@@ -512,9 +508,7 @@ frb_fis_get(VALUE self, VALUE ridx)
  *  Add a FieldInfo object. Use the FieldInfos#add_field method where
  *  possible.
  */
-static VALUE
-frb_fis_add(VALUE self, VALUE rfi)
-{
+static VALUE frb_fis_add(VALUE self, VALUE rfi) {
     FrtFieldInfos *fis = (FrtFieldInfos *)DATA_PTR(self);
     FrtFieldInfo *fi = (FrtFieldInfo *)frb_rb_data_ptr(rfi);
     frt_fis_add_field(fis, fi);
@@ -671,28 +665,35 @@ frb_fis_get_tk_fields(VALUE self)
  *
  ****************************************************************************/
 
-static void
-frb_te_free(void *p)
-{
+static void frb_te_free(void *p) {
     FrtTermEnum *te = (FrtTermEnum *)p;
     te->close(te);
 }
 
-static VALUE
-frb_te_get_set_term(VALUE self, const char *term)
-{
+const size_t frb_te_size(const void *p) {
+    return sizeof(FrtTermEnum);
+    (void)p;
+}
+
+const rb_data_type_t frb_term_enum_t = {
+    .wrap_struct_name = "FrbTermEnum",
+    .function = {
+        .dfree = frb_te_free,
+        .dsize = frb_te_size
+    }
+};
+
+static VALUE frb_te_get_set_term(VALUE self, const char *term) {
     FrtTermEnum *te = (FrtTermEnum *)DATA_PTR(self);
     VALUE str = term ? rb_str_new(term, te->curr_term_len) : Qnil;
     rb_ivar_set(self, id_term, str);
     return str;
 }
 
-static VALUE
-frb_get_te(VALUE rir, FrtTermEnum *te)
-{
+static VALUE frb_get_te(VALUE rir, FrtTermEnum *te) {
     VALUE self = Qnil;
     if (te != NULL) {
-        self = Data_Wrap_Struct(cTermEnum, NULL, &frb_te_free, te);
+        self = TypedData_Wrap_Struct(cTermEnum, &frb_term_enum_t, te);
         frb_te_get_set_term(self, te->curr_term);
         rb_ivar_set(self, id_fld_num_map, rb_ivar_get(rir, id_fld_num_map));
     }
@@ -705,9 +706,7 @@ frb_get_te(VALUE rir, FrtTermEnum *te)
  *
  *  Returns the next term in the enumeration or nil otherwise.
  */
-static VALUE
-frb_te_next(VALUE self)
-{
+static VALUE frb_te_next(VALUE self) {
     FrtTermEnum *te = (FrtTermEnum *)DATA_PTR(self);
     return frb_te_get_set_term(self, te->next(te));
 }
@@ -719,9 +718,7 @@ frb_te_next(VALUE self)
  *  Returns the current term pointed to by the enum. This method should only
  *  be called after a successful call to TermEnum#next.
  */
-static VALUE
-frb_te_term(VALUE self)
-{
+static VALUE frb_te_term(VALUE self) {
     return rb_ivar_get(self, id_term);
 }
 
@@ -733,9 +730,7 @@ frb_te_term(VALUE self)
  *  That is the number of documents that this term appears in. The method
  *  should only be called after a successful call to TermEnum#next.
  */
-static VALUE
-frb_te_doc_freq(VALUE self)
-{
+static VALUE frb_te_doc_freq(VALUE self) {
     FrtTermEnum *te = (FrtTermEnum *)DATA_PTR(self);
     return INT2FIX(te->curr_ti.doc_freq);
 }
@@ -751,9 +746,7 @@ frb_te_doc_freq(VALUE self)
  *
  *  Returns the first term greater than or equal to +target+
  */
-static VALUE
-frb_te_skip_to(VALUE self, VALUE rterm)
-{
+static VALUE frb_te_skip_to(VALUE self, VALUE rterm) {
     FrtTermEnum *te = (FrtTermEnum *)DATA_PTR(self);
     return frb_te_get_set_term(self, te->skip_to(te, rs2s(rterm)));
 }
@@ -765,9 +758,7 @@ frb_te_skip_to(VALUE self, VALUE rterm)
  *  Iterates through all the terms in the field, yielding the term and the
  *  document frequency.
  */
-static VALUE
-frb_te_each(VALUE self)
-{
+static VALUE frb_te_each(VALUE self) {
     FrtTermEnum *te = (FrtTermEnum *)DATA_PTR(self);
     char *term;
     int term_cnt = 0;
@@ -799,9 +790,7 @@ frb_te_each(VALUE self)
  *      do_something()
  *    end
  */
-static VALUE
-frb_te_set_field(VALUE self, VALUE rfield)
-{
+static VALUE frb_te_set_field(VALUE self, VALUE rfield) {
     FrtTermEnum *te = (FrtTermEnum *)DATA_PTR(self);
     int field_num = 0;
     VALUE rfnum_map = rb_ivar_get(self, id_fld_num_map);
@@ -841,9 +830,7 @@ frb_te_set_field(VALUE self, VALUE rfield)
  *    #   ["cantaloupe",12]
  *    # ]
  */
-static VALUE
-frb_te_to_json(int argc, VALUE *argv, VALUE self)
-{
+static VALUE frb_te_to_json(int argc, VALUE *argv, VALUE self) {
     FrtTermEnum *te = (FrtTermEnum *)DATA_PTR(self);
     VALUE rjson;
     char *json, *jp;
@@ -868,8 +855,7 @@ frb_te_to_json(int argc, VALUE *argv, VALUE self)
             *(jp++) = ']';
             *(jp++) = ',';
         }
-    }
-    else {
+    } else {
         while (NULL != (term = te->next(te))) {
             /* enough room for for term after converting " to '"' and frequency
              * plus some extra for good measure */
@@ -905,17 +891,26 @@ frb_te_to_json(int argc, VALUE *argv, VALUE self)
  *
  ****************************************************************************/
 
-static void
-frb_tde_free(void *p)
-{
+static void frb_tde_free(void *p) {
     FrtTermDocEnum *tde = (FrtTermDocEnum *)p;
     tde->close(tde);
 }
 
-static VALUE
-frb_get_tde(VALUE rir, FrtTermDocEnum *tde)
-{
-    VALUE self = Data_Wrap_Struct(cTermDocEnum, NULL, &frb_tde_free, tde);
+const size_t frb_tde_size(const void *p) {
+    return sizeof(FrtTermDocEnum);
+    (void)p;
+}
+
+const rb_data_type_t frb_term_doc_enum_t = {
+    .wrap_struct_name = "FrbTermDocEnum",
+    .function = {
+        .dfree = frb_tde_free,
+        .dsize = frb_tde_size
+    }
+};
+
+static VALUE frb_get_tde(VALUE rir, FrtTermDocEnum *tde) {
+    VALUE self = TypedData_Wrap_Struct(cTermDocEnum, &frb_term_doc_enum_t, tde);
     rb_ivar_set(self, id_fld_num_map, rb_ivar_get(rir, id_fld_num_map));
     return self;
 }
@@ -1293,7 +1288,6 @@ static VALUE
 frb_iw_close(VALUE self)
 {
     FrtIndexWriter *iw = (FrtIndexWriter *)DATA_PTR(self);
-    Frt_Unwrap_Struct(self);
     frt_iw_close(iw);
     return Qnil;
 }
@@ -1322,9 +1316,26 @@ frb_iw_close(VALUE self)
  *
  * See FrtIndexWriter for more options.
  */
-static VALUE
-frb_iw_init(int argc, VALUE *argv, VALUE self)
-{
+const size_t frb_index_writer_t_size(const void *p) {
+    return sizeof(FrtIndexWriter);
+    (void)p;
+}
+
+const rb_data_type_t frb_index_writer_t = {
+    .wrap_struct_name = "FrbIndexWriter",
+    .function = {
+        .dmark = frb_iw_mark,
+        .dfree = frb_iw_free,
+        .dsize = frb_index_writer_t_size
+    }
+};
+
+static VALUE frb_iw_alloc(VALUE rclass) {
+    FrtIndexWriter *iw = frt_iw_alloc();
+    return TypedData_Wrap_Struct(rclass, &frb_index_writer_t, iw);
+}
+
+static VALUE frb_iw_init(int argc, VALUE *argv, VALUE self) {
     VALUE roptions, rval;
     bool create = false;
     bool create_if_missing = true;
@@ -1380,7 +1391,7 @@ frb_iw_init(int argc, VALUE *argv, VALUE self)
             SET_INT_ATTR(max_field_length);
         }
         if (NULL == store) {
-            store = frt_open_ram_store();
+            store = frt_open_ram_store(NULL);
             FRT_DEREF(store);
         }
         if (!create && create_if_missing && !store->exists(store, "segments")) {
@@ -1389,7 +1400,7 @@ frb_iw_init(int argc, VALUE *argv, VALUE self)
         if (create) {
             FrtFieldInfos *fis;
             if ((rval = rb_hash_aref(roptions, sym_field_infos)) != Qnil) {
-                Data_Get_Struct(rval, FrtFieldInfos, fis);
+                TypedData_Get_Struct(rval, FrtFieldInfos, &frb_field_infos_t, fis);
                 frt_index_create(store, fis);
             } else {
                 fis = frt_fis_new(FRT_STORE_YES, FRT_INDEX_YES,
@@ -1399,9 +1410,9 @@ frb_iw_init(int argc, VALUE *argv, VALUE self)
             }
         }
 
-        iw = frt_iw_open(store, analyzer, &config);
+        TypedData_Get_Struct(self, FrtIndexWriter, &frb_index_writer_t, iw);
+        iw = frt_iw_open(iw, store, analyzer, &config);
 
-        Frt_Wrap_Struct(self, &frb_iw_mark, &frb_iw_free, iw);
     default:
         ex_code = xcontext.excode;
         msg = xcontext.msg;
@@ -1574,6 +1585,42 @@ frb_iw_commit(VALUE self)
     return self;
 }
 
+/* index reader intermission */
+static VALUE frb_ir_close(VALUE self);
+
+void frb_ir_free(void *p) {
+    object_del(p);
+    frt_ir_close((FrtIndexReader *)p);
+}
+
+void frb_ir_mark(void *p) {
+    FrtIndexReader *ir = (FrtIndexReader *)p;
+    FrtMultiReader *mr = (FrtMultiReader *)p;
+
+    if (ir->type == FRT_MULTI_READER) {
+        int i;
+        for (i = 0; i < mr->r_cnt; i++) {
+            frb_gc_mark(mr->sub_readers[i]);
+        }
+    } else {
+        frb_gc_mark(ir->store);
+    }
+}
+
+const size_t frb_index_reader_t_size(const void *p) {
+    return sizeof(FrtMultiReader);
+    (void)p;
+}
+
+const rb_data_type_t frb_index_reader_t = {
+    .wrap_struct_name = "FrbIndexReader",
+    .function = {
+        .dmark = frb_ir_mark,
+        .dfree = frb_ir_free,
+        .dsize = frb_index_reader_t_size
+    }
+};
+
 /*
  *  call-seq:
  *     iw.add_readers(reader_array) -> iw
@@ -1584,9 +1631,7 @@ frb_iw_commit(VALUE self)
  *  machines. Then you can finish by merging all of the indexes into a single
  *  index.
  */
-static VALUE
-frb_iw_add_readers(VALUE self, VALUE rreaders)
-{
+static VALUE frb_iw_add_readers(VALUE self, VALUE rreaders) {
     FrtIndexWriter *iw = (FrtIndexWriter *)DATA_PTR(self);
     int i;
     FrtIndexReader **irs;
@@ -1596,7 +1641,7 @@ frb_iw_add_readers(VALUE self, VALUE rreaders)
     i = RARRAY_LEN(rreaders);
     while (i-- > 0) {
         FrtIndexReader *ir;
-        Data_Get_Struct(RARRAY_PTR(rreaders)[i], FrtIndexReader, ir);
+        TypedData_Get_Struct(RARRAY_PTR(rreaders)[i], FrtIndexReader, &frb_index_reader_t, ir);
         irs[i] = ir;
     }
     frt_iw_add_readers(iw, irs, RARRAY_LEN(rreaders));
@@ -1942,15 +1987,24 @@ frb_iw_set_use_compound_file(VALUE self, VALUE rval)
  *
  ****************************************************************************/
 
-static void
-frb_lzd_data_free(void *p)
-{
+static void frb_lzd_data_free(void *p) {
     frt_lazy_doc_close((FrtLazyDoc *)p);
 }
 
-static VALUE
-frb_lazy_df_load(VALUE self, VALUE rkey, FrtLazyDocField *lazy_df)
-{
+const size_t frb_lazy_doc_size(const void *p) {
+    return sizeof(FrtLazyDoc);
+    (void)p;
+}
+
+const rb_data_type_t frb_lazy_doc_t = {
+    .wrap_struct_name = "FrbLazyDoc",
+    .function = {
+        .dfree = frb_lzd_data_free,
+        .dsize = frb_lazy_doc_size
+    }
+};
+
+static VALUE frb_lazy_df_load(VALUE self, VALUE rkey, FrtLazyDocField *lazy_df) {
     VALUE rdata = Qnil;
     if (lazy_df) {
         if (lazy_df->size == 1) {
@@ -1980,9 +2034,7 @@ frb_lazy_df_load(VALUE self, VALUE rkey, FrtLazyDocField *lazy_df)
  *  This method is used internally to lazily load fields. You should never
  *  really need to call it yourself.
  */
-static VALUE
-frb_lzd_default(VALUE self, VALUE rkey)
-{
+static VALUE frb_lzd_default(VALUE self, VALUE rkey) {
     FrtLazyDoc *lazy_doc = (FrtLazyDoc *)DATA_PTR(rb_ivar_get(self, id_data));
     FrtSymbol field = frb_field(rkey);
     VALUE rfield = ID2SYM(field);
@@ -1998,9 +2050,7 @@ frb_lzd_default(VALUE self, VALUE rkey)
  *  to access any of these fields in the document the field will be loaded.
  *  Try to access any other field an nil will be returned.
  */
-static VALUE
-frb_lzd_fields(VALUE self)
-{
+static VALUE frb_lzd_fields(VALUE self) {
     return rb_ivar_get(self, id_fields);
 }
 
@@ -2010,9 +2060,7 @@ frb_lzd_fields(VALUE self)
  *
  *  Load all unloaded fields in the document from the index.
  */
-static VALUE
-frb_lzd_load(VALUE self)
-{
+static VALUE frb_lzd_load(VALUE self) {
     FrtLazyDoc *lazy_doc = (FrtLazyDoc *)DATA_PTR(rb_ivar_get(self, id_data));
     int i;
     for (i = 0; i < lazy_doc->size; i++) {
@@ -2022,9 +2070,7 @@ frb_lzd_load(VALUE self)
     return self;
 }
 
-VALUE
-frb_get_lazy_doc(FrtLazyDoc *lazy_doc)
-{
+VALUE frb_get_lazy_doc(FrtLazyDoc *lazy_doc) {
     int i;
     VALUE rfields = rb_ary_new2(lazy_doc->size);
 
@@ -2032,7 +2078,7 @@ frb_get_lazy_doc(FrtLazyDoc *lazy_doc)
     self = rb_hash_new();
     OBJSETUP(self, cLazyDoc, T_HASH);
 
-    rdata = Data_Wrap_Struct(cLazyDocData, NULL, &frb_lzd_data_free, lazy_doc);
+    rdata = TypedData_Wrap_Struct(cLazyDocData, &frb_lazy_doc_t, lazy_doc);
     rb_ivar_set(self, id_data, rdata);
 
     for (i = 0; i < lazy_doc->size; i++) {
@@ -2048,32 +2094,6 @@ frb_get_lazy_doc(FrtLazyDoc *lazy_doc)
  * IndexReader Methods
  *
  ****************************************************************************/
-
-void
-frb_ir_free(void *p)
-{
-    object_del(p);
-    frt_ir_close((FrtIndexReader *)p);
-}
-
-void
-frb_ir_mark(void *p)
-{
-    FrtIndexReader *ir = (FrtIndexReader *)p;
-    frb_gc_mark(ir->store);
-}
-
-static VALUE frb_ir_close(VALUE self);
-
-void
-frb_mr_mark(void *p)
-{
-    FrtMultiReader *mr = (FrtMultiReader *)p;
-    int i;
-    for (i = 0; i < mr->r_cnt; i++) {
-        frb_gc_mark(mr->sub_readers[i]);
-    }
-}
 
 /*
  *  call-seq:
@@ -2101,9 +2121,15 @@ frb_mr_mark(void *p)
  *
  *    iw = IndexReader.new(["/path/to/index1", "/path/to/index2"])
  */
-static VALUE
-frb_ir_init(VALUE self, VALUE rdir)
-{
+
+static VALUE frb_ir_alloc(VALUE rclass) {
+    // allocate for FrtSegmentReader, the largest of the Frt*Reader structs,
+    // FrtIndexReader is part of it and later on its determined what its going to be
+    FrtIndexReader *ir = (FrtIndexReader *)frt_sr_alloc();
+    return TypedData_Wrap_Struct(rclass, &frb_index_reader_t, ir);
+}
+
+static VALUE frb_ir_init(VALUE self, VALUE rdir) {
     FrtStore *store = NULL;
     FrtIndexReader *ir;
     int i;
@@ -2123,7 +2149,7 @@ frb_ir_init(VALUE self, VALUE rdir)
                 switch (TYPE(rdir)) {
                     case T_DATA:
                         if (CLASS_OF(rdir) == cIndexReader) {
-                            Data_Get_Struct(rdir, FrtIndexReader, sub_readers[i]);
+                            TypedData_Get_Struct(rdir, FrtIndexReader, &frb_index_reader_t, sub_readers[i]);
                             FRT_REF(sub_readers[i]);
                             continue;
                         } else if (RTEST(rb_obj_is_kind_of(rdir, cDirectory))) {
@@ -2148,10 +2174,10 @@ frb_ir_init(VALUE self, VALUE rdir)
                                 rs2s(rb_obj_as_string(rdir)));
                         break;
                 }
-                sub_readers[i] = frt_ir_open(store);
+                sub_readers[i] = frt_ir_open(NULL, store);
             }
-            ir = frt_mr_open(sub_readers, reader_cnt);
-            Frt_Wrap_Struct(self, &frb_mr_mark, &frb_ir_free, ir);
+            TypedData_Get_Struct(self, FrtIndexReader, &frb_index_reader_t, ir);
+            ir = frt_mr_open(ir, sub_readers, reader_cnt);
         } else {
             switch (TYPE(rdir)) {
                 case T_DATA:
@@ -2168,8 +2194,8 @@ frb_ir_init(VALUE self, VALUE rdir)
                             rs2s(rb_obj_as_string(rdir)));
                     break;
             }
-            ir = frt_ir_open(store);
-            Frt_Wrap_Struct(self, &frb_ir_mark, &frb_ir_free, ir);
+            TypedData_Get_Struct(self, FrtIndexReader, &frb_index_reader_t, ir);
+            ir = frt_ir_open(ir, store);
         }
     default:
         ex_code = xcontext.excode;
@@ -2285,7 +2311,6 @@ frb_ir_close(VALUE self)
 {
     FrtIndexReader *ir = (FrtIndexReader *)DATA_PTR(self);
     object_del(ir);
-    Frt_Unwrap_Struct(self);
     frt_ir_close(ir);
     return self;
 }
@@ -2856,7 +2881,7 @@ Init_FieldInfo(void)
     sym_with_positions_offsets = ID2SYM(rb_intern("with_positions_offsets"));
 
     cFieldInfo = rb_define_class_under(mIndex, "FieldInfo", rb_cObject);
-    rb_define_alloc_func(cFieldInfo, frb_data_alloc);
+    rb_define_alloc_func(cFieldInfo, frb_fi_alloc);
 
     rb_define_method(cFieldInfo, "initialize",  frb_fi_init, -1);
     rb_define_method(cFieldInfo, "name",        frb_fi_name, 0);
@@ -2916,13 +2941,11 @@ Init_FieldInfo(void)
  *  along. If you add a document to the index which has fields that the index
  *  doesn't know about then the default properties are used for the new field.
  */
-static void
-Init_FieldInfos(void)
-{
+static void Init_FieldInfos(void) {
     Init_FieldInfo();
 
     cFieldInfos = rb_define_class_under(mIndex, "FieldInfos", rb_cObject);
-    rb_define_alloc_func(cFieldInfos, frb_data_alloc);
+    rb_define_alloc_func(cFieldInfos, frb_fis_alloc);
 
     rb_define_method(cFieldInfos, "initialize", frb_fis_init, -1);
     rb_define_method(cFieldInfos, "to_a",       frb_fis_to_a, 0);
@@ -3268,7 +3291,7 @@ Init_IndexWriter(void)
     sym_use_compound_file   = ID2SYM(rb_intern("use_compound_file"));
 
     cIndexWriter = rb_define_class_under(mIndex, "IndexWriter", rb_cObject);
-    rb_define_alloc_func(cIndexWriter, frb_data_alloc);
+    rb_define_alloc_func(cIndexWriter, frb_iw_alloc);
 
     rb_define_const(cIndexWriter, "WRITE_LOCK_TIMEOUT", INT2FIX(1));
     rb_define_const(cIndexWriter, "COMMIT_LOCK_TIMEOUT", INT2FIX(10));
@@ -3414,7 +3437,7 @@ void
 Init_IndexReader(void)
 {
     cIndexReader = rb_define_class_under(mIndex, "IndexReader", rb_cObject);
-    rb_define_alloc_func(cIndexReader, frb_data_alloc);
+    rb_define_alloc_func(cIndexReader, frb_ir_alloc);
     rb_define_method(cIndexReader, "initialize",    frb_ir_init, 1);
     rb_define_method(cIndexReader, "set_norm",      frb_ir_set_norm, 3);
     rb_define_method(cIndexReader, "norms",         frb_ir_norms, 1);

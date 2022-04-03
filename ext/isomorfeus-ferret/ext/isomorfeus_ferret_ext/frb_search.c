@@ -2,7 +2,9 @@
 #include "frt_array.h"
 #include "frt_search.h"
 #include "isomorfeus_ferret.h"
-#include <ruby/st.h>
+#include <ruby.h>
+
+#undef close
 
 VALUE mSearch;
 
@@ -128,8 +130,7 @@ static VALUE sym_ellipsis;
 static FrtSymbol fsym_id;
 
 extern VALUE cIndexReader;
-extern void frb_ir_free(void *p);
-extern void frb_ir_mark(void *p);
+extern const rb_data_type_t frb_index_reader_t;
 
 extern void frb_set_term(VALUE rterm, FrtTerm *t);
 extern VALUE frb_get_analyzer(FrtAnalyzer *a);
@@ -143,13 +144,8 @@ extern VALUE frb_get_lazy_doc(FrtLazyDoc *lazy_doc);
  *
  ****************************************************************************/
 
-static VALUE
-frb_get_hit(FrtHit *hit)
-{
-    return rb_struct_new(cHit,
-                         INT2FIX(hit->doc),
-                         rb_float_new((double)hit->score),
-                         NULL);
+static VALUE frb_get_hit(FrtHit *hit) {
+    return rb_struct_new(cHit, INT2FIX(hit->doc), rb_float_new((double)hit->score), NULL);
 }
 
 /****************************************************************************
@@ -158,9 +154,7 @@ frb_get_hit(FrtHit *hit)
  *
  ****************************************************************************/
 
-static VALUE
-frb_get_td(FrtTopDocs *td, VALUE rsearcher)
-{
+static VALUE frb_get_td(FrtTopDocs *td, VALUE rsearcher) {
     int i;
     VALUE rtop_docs;
     VALUE hit_ary = rb_ary_new2(td->size);
@@ -169,12 +163,8 @@ frb_get_td(FrtTopDocs *td, VALUE rsearcher)
       rb_ary_store(hit_ary, i, frb_get_hit(td->hits[i]));
     }
 
-    rtop_docs = rb_struct_new(cTopDocs,
-                              INT2FIX(td->total_hits),
-                              hit_ary,
-                              rb_float_new((double)td->max_score),
-                              rsearcher,
-                              NULL);
+    rtop_docs = rb_struct_new(cTopDocs, INT2FIX(td->total_hits), hit_ary,
+                              rb_float_new((double)td->max_score), rsearcher, NULL);
     frt_td_destroy(td);
     return rtop_docs;
 }
@@ -185,9 +175,7 @@ frb_get_td(FrtTopDocs *td, VALUE rsearcher)
  *
  *  Returns a string representation of the top_doc in readable format.
  */
-static VALUE
-frb_td_to_s(int argc, VALUE *argv, VALUE self)
-{
+static VALUE frb_td_to_s(int argc, VALUE *argv, VALUE self) {
     int i;
     VALUE rhits = rb_funcall(self, id_hits, 0);
     FrtSearcher *sea = (FrtSearcher *)DATA_PTR(rb_funcall(self, id_searcher, 0));
@@ -235,9 +223,7 @@ frb_td_to_s(int argc, VALUE *argv, VALUE self)
     return rstr;
 }
 
-static char *
-frb_lzd_load_to_json(FrtLazyDoc *lzd, char **str, char *s, int *slen)
-{
+static char *frb_lzd_load_to_json(FrtLazyDoc *lzd, char **str, char *s, int *slen) {
 	int i, j;
 	int diff = s - *str;
 	int len = diff, l;
@@ -285,9 +271,7 @@ frb_lzd_load_to_json(FrtLazyDoc *lzd, char **str, char *s, int *slen)
  *
  *  Returns a json representation of the top_doc.
  */
-static VALUE
-frb_td_to_json(VALUE self)
-{
+static VALUE frb_td_to_json(VALUE self) {
 	int i;
 	VALUE rhits = rb_funcall(self, id_hits, 0);
 	VALUE rhit;
@@ -333,9 +317,7 @@ frb_td_to_json(VALUE self)
  *
  *  Returns a string representation of the explanation in readable format.
  */
-static VALUE
-frb_expl_to_s(VALUE self)
-{
+static VALUE frb_expl_to_s(VALUE self) {
     GET_EXPL();
     char *str = frt_expl_to_s(expl);
     VALUE rstr = rb_str_new2(str);
@@ -349,9 +331,7 @@ frb_expl_to_s(VALUE self)
  *
  *  Returns an html representation of the explanation in readable format.
  */
-static VALUE
-frb_expl_to_html(VALUE self)
-{
+static VALUE frb_expl_to_html(VALUE self) {
     GET_EXPL();
     char *str = frt_expl_to_html(expl);
     VALUE rstr = rb_str_new2(str);
@@ -367,9 +347,7 @@ frb_expl_to_html(VALUE self)
  *  purposes mainly to check that the score returned by the explanation
  *  matches that of the score for the document in the original query.
  */
-static VALUE
-frb_expl_score(VALUE self)
-{
+static VALUE frb_expl_score(VALUE self) {
     GET_EXPL();
     return rb_float_new((double)expl->value);
 }
@@ -380,9 +358,7 @@ frb_expl_score(VALUE self)
  *
  ****************************************************************************/
 
-static void
-frb_q_free(void *p)
-{
+static void frb_q_free(void *p) {
     object_del(p);
     frt_q_deref((FrtQuery *)p);
 }
@@ -397,9 +373,7 @@ frb_q_free(void *p)
  *  this string through the Query parser will give you the exact Query you
  *  began with. This can be a good way to explore how the QueryParser works.
  */
-static VALUE
-frb_q_to_s(int argc, VALUE *argv, VALUE self)
-{
+static VALUE frb_q_to_s(int argc, VALUE *argv, VALUE self) {
     GET_Q();
     VALUE rstr, rfield;
     char *str;
@@ -420,9 +394,7 @@ frb_q_to_s(int argc, VALUE *argv, VALUE self)
  *  Returns the queries boost value. See the Query description for more
  *  information on Query boosts.
  */
-static VALUE
-frb_q_get_boost(VALUE self)
-{
+static VALUE frb_q_get_boost(VALUE self) {
     GET_Q();
     return rb_float_new((double)q->boost);
 }
@@ -434,9 +406,7 @@ frb_q_get_boost(VALUE self)
  *  Set the boost for a query. See the Query description for more information
  *  on Query boosts.
  */
-static VALUE
-frb_q_set_boost(VALUE self, VALUE rboost)
-{
+static VALUE frb_q_set_boost(VALUE self, VALUE rboost) {
     GET_Q();
     q->boost = (float)NUM2DBL(rboost);
     return rboost;
@@ -449,9 +419,7 @@ frb_q_set_boost(VALUE self, VALUE rboost)
  *  Return a hash value for the query. This is used for caching query results
  *  in a hash object.
  */
-static VALUE
-frb_q_hash(VALUE self)
-{
+static VALUE frb_q_hash(VALUE self) {
     GET_Q();
     return INT2FIX(q->hash(q));
 }
@@ -469,12 +437,10 @@ frb_q_hash(VALUE self)
  *  although their result sets will be identical. Most queries should match as
  *  expected however.
  */
-static VALUE
-frb_q_eql(VALUE self, VALUE other)
-{
+static VALUE frb_q_eql(VALUE self, VALUE other) {
     GET_Q();
     FrtQuery *oq;
-    Data_Get_Struct(other, FrtQuery, oq);
+    oq = DATA_PTR(other);
     return q->eq(q, oq) ? Qtrue : Qfalse;
 }
 
@@ -487,9 +453,7 @@ frb_q_eql(VALUE self, VALUE other)
  *  searcher so that the query can be rewritten and optimized like it would be
  *  in a real search.
  */
-static VALUE
-frb_q_get_terms(VALUE self, VALUE searcher)
-{
+static VALUE frb_q_get_terms(VALUE self, VALUE searcher) {
     VALUE rterms = rb_ary_new();
     FrtHashSet *terms = frt_hs_new((frt_hash_ft)&frt_term_hash,
                             (frt_eq_ft)&frt_term_eq,
@@ -509,85 +473,27 @@ frb_q_get_terms(VALUE self, VALUE searcher)
     return rterms;
 }
 
-#define MK_QUERY(klass, q) Data_Wrap_Struct(klass, NULL, &frb_q_free, q)
-VALUE
-frb_get_q(FrtQuery *q)
-{
-    VALUE self = object_get(q);
+/****************************************************************************
+ * TermQuery Methods
+ ****************************************************************************/
 
-    if (self == Qnil) {
-        switch (q->type) {
-            case TERM_QUERY:
-                self = MK_QUERY(cTermQuery, q);
-                break;
-            case MULTI_TERM_QUERY:
-                self = MK_QUERY(cMultiTermQuery, q);
-                break;
-            case BOOLEAN_QUERY:
-                self = MK_QUERY(cBooleanQuery, q);
-                break;
-            case PHRASE_QUERY:
-                self = MK_QUERY(cPhraseQuery, q);
-                break;
-            case CONSTANT_QUERY:
-                self = MK_QUERY(cConstantScoreQuery, q);
-                break;
-            case FILTERED_QUERY:
-                self = MK_QUERY(cFilteredQuery, q);
-                break;
-            case MATCH_ALL_QUERY:
-                self = MK_QUERY(cMatchAllQuery, q);
-                break;
-            case RANGE_QUERY:
-                self = MK_QUERY(cRangeQuery, q);
-                break;
-            case TYPED_RANGE_QUERY:
-                self = MK_QUERY(cTypedRangeQuery, q);
-                break;
-            case WILD_CARD_QUERY:
-                self = MK_QUERY(cWildcardQuery, q);
-                break;
-            case FUZZY_QUERY:
-                self = MK_QUERY(cFuzzyQuery, q);
-                break;
-            case PREFIX_QUERY:
-                self = MK_QUERY(cPrefixQuery, q);
-                break;
-            case SPAN_TERM_QUERY:
-                self = MK_QUERY(cSpanMultiTermQuery, q);
-                break;
-            case SPAN_MULTI_TERM_QUERY:
-                self = MK_QUERY(cSpanPrefixQuery, q);
-                break;
-            case SPAN_PREFIX_QUERY:
-                self = MK_QUERY(cSpanTermQuery, q);
-                break;
-            case SPAN_FIRST_QUERY:
-                self = MK_QUERY(cSpanFirstQuery, q);
-                break;
-            case SPAN_OR_QUERY:
-                self = MK_QUERY(cSpanOrQuery, q);
-                break;
-            case SPAN_NOT_QUERY:
-                self = MK_QUERY(cSpanNotQuery, q);
-                break;
-            case SPAN_NEAR_QUERY:
-                self = MK_QUERY(cSpanNearQuery, q);
-                break;
-            default:
-                rb_raise(rb_eArgError, "Unknown query type");
-                break;
-        }
-        object_add(q, self);
-    }
-    return self;
+static size_t frb_term_query_size(const void *p) {
+    return sizeof(FrtTermQuery);
+    (void)p;
 }
 
-/****************************************************************************
- *
- * TermQuery Methods
- *
- ****************************************************************************/
+const rb_data_type_t frb_term_query_t = {
+    .wrap_struct_name = "FrbTermQuery",
+    .function = {
+        .dfree = frb_q_free,
+        .dsize = frb_term_query_size
+    }
+};
+
+static VALUE frb_tq_alloc(VALUE rclass) {
+    FrtQuery *tq = frt_tq_alloc();
+    return TypedData_Wrap_Struct(rclass, &frb_term_query_t, tq);
+}
 
 /*
  *  call-seq:
@@ -598,13 +504,12 @@ frb_get_q(FrtQuery *q)
  *
  *  Note: As usual, field should be a symbol
  */
-static VALUE
-frb_tq_init(VALUE self, VALUE rfield, VALUE rterm)
-{
+static VALUE frb_tq_init(VALUE self, VALUE rfield, VALUE rterm) {
     FrtSymbol field = frb_field(rfield);
     char *term = rs2s(rb_obj_as_string(rterm));
-    FrtQuery *q = frt_tq_new(field, term);
-    Frt_Wrap_Struct(self, NULL, &frb_q_free, q);
+    FrtQuery *q;
+    TypedData_Get_Struct(self, FrtQuery, &frb_term_query_t, q);
+    frt_tq_init(q, field, term);
     object_add(q, self);
     return self;
 }
@@ -615,6 +520,24 @@ frb_tq_init(VALUE self, VALUE rfield, VALUE rterm)
  *
  ****************************************************************************/
 
+static size_t frb_multi_term_query_size(const void *p) {
+    return sizeof(FrtMultiTermQuery);
+    (void)p;
+}
+
+const rb_data_type_t frb_multi_term_query_t = {
+    .wrap_struct_name = "FrbTermQuery",
+    .function = {
+        .dfree = frb_q_free,
+        .dsize = frb_multi_term_query_size
+    }
+};
+
+static VALUE frb_mtq_alloc(VALUE rclass) {
+    FrtQuery *tq = frt_multi_tq_alloc();
+    return TypedData_Wrap_Struct(rclass, &frb_multi_term_query_t, tq);
+}
+
 /*
  *  call-seq:
  *     MultiTermQuery.default_max_terms -> number
@@ -622,9 +545,7 @@ frb_tq_init(VALUE self, VALUE rfield, VALUE rterm)
  *  Get the default value for +:max_terms+ in a MultiTermQuery. This value is
  *  also used by PrefixQuery, FuzzyQuery and WildcardQuery.
  */
-static VALUE
-frb_mtq_get_dmt(VALUE self)
-{
+static VALUE frb_mtq_get_dmt(VALUE self) {
     return rb_cvar_get(cMultiTermQuery, id_default_max_terms);
 }
 
@@ -635,9 +556,7 @@ frb_mtq_get_dmt(VALUE self)
  *  Set the default value for +:max_terms+ in a MultiTermQuery. This value is
  *  also used by PrefixQuery, FuzzyQuery and WildcardQuery.
  */
-static VALUE
-frb_mtq_set_dmt(VALUE self, VALUE rnum_terms)
-{
+static VALUE frb_mtq_set_dmt(VALUE self, VALUE rnum_terms) {
     int max_terms = FIX2INT(rnum_terms);
     if (max_terms <= 0) {
         rb_raise(rb_eArgError,
@@ -671,14 +590,12 @@ frb_mtq_set_dmt(VALUE self, VALUE rnum_terms)
  *               added to the query you could set a lower limit to this score.
  *               FuzzyQuery in particular makes use of this parameter.
  */
-static VALUE
-frb_mtq_init(int argc, VALUE *argv, VALUE self)
-{
+static VALUE frb_mtq_init(int argc, VALUE *argv, VALUE self) {
     VALUE rfield, roptions;
     float min_score = 0.0f;
     int max_terms = FIX2INT(frb_mtq_get_dmt(self));
     FrtQuery *q;
-
+    TypedData_Get_Struct(self, FrtQuery, &frb_multi_term_query_t, q);
     if (rb_scan_args(argc, argv, "11", &rfield, &roptions) == 2) {
         VALUE v;
         if (Qnil != (v = rb_hash_aref(roptions, sym_max_terms))) {
@@ -688,8 +605,7 @@ frb_mtq_init(int argc, VALUE *argv, VALUE self)
             min_score = (float)NUM2DBL(v);
         }
     }
-    q = frt_multi_tq_new_conf(frb_field(rfield), max_terms, min_score);
-    Frt_Wrap_Struct(self, NULL, &frb_q_free, q);
+    frt_multi_tq_init_conf(q, frb_field(rfield), max_terms, min_score);
     object_add(q, self);
     return self;
 }
@@ -702,9 +618,7 @@ frb_mtq_init(int argc, VALUE *argv, VALUE self)
  *  Add a term to the MultiTermQuery with the score 1.0 unless specified
  *  otherwise.
  */
-static VALUE
-frb_mtq_add_term(int argc, VALUE *argv, VALUE self)
-{
+static VALUE frb_mtq_add_term(int argc, VALUE *argv, VALUE self) {
     GET_Q();
     VALUE rterm, rboost;
     float boost = 1.0f;
@@ -720,9 +634,7 @@ frb_mtq_add_term(int argc, VALUE *argv, VALUE self)
 
 typedef FrtQuery *(*mtq_maker_ft)(FrtSymbol field, const char *term);
 
-static int
-get_max_terms(VALUE rmax_terms, int max_terms)
-{
+static int get_max_terms(VALUE rmax_terms, int max_terms) {
     VALUE v;
     switch (TYPE(rmax_terms)) {
         case T_HASH:
@@ -739,56 +651,48 @@ get_max_terms(VALUE rmax_terms, int max_terms)
     return max_terms;
 }
 
-static VALUE
-frb_mtq_init_specific(int argc, VALUE *argv, VALUE self, mtq_maker_ft mm)
-{
-    VALUE rfield, rterm, rmax_terms;
-    int max_terms =
-        FIX2INT(rb_cvar_get(cMultiTermQuery, id_default_max_terms));
-    FrtQuery *q;
-
-    if (rb_scan_args(argc, argv, "21", &rfield, &rterm, &rmax_terms) == 3) {
-        max_terms = get_max_terms(rmax_terms, max_terms);
-    }
-
-    q = (*mm)(frb_field(rfield), StringValuePtr(rterm));
-    FrtMTQMaxTerms(q) = max_terms;
-    Frt_Wrap_Struct(self, NULL, &frb_q_free, q);
-    object_add(q, self);
-    return self;
-}
-
 /****************************************************************************
  *
  * BooleanClause Methods
  *
  ****************************************************************************/
 
-static void
-frb_bc_mark(void *p)
-{
+static size_t frb_boolean_clause_t_size(const void *p) {
+    return sizeof(FrtBooleanClause);
+    (void)p;
+}
+
+static void frb_bc_mark(void *p) {
     frb_gc_mark(((FrtBooleanClause *)p)->query);
 }
 
-static void
-frb_bc_free(void *p)
-{
+static void frb_bc_free(void *p) {
     object_del(p);
     frt_bc_deref((FrtBooleanClause *)p);
 }
 
-static VALUE
-frb_bc_wrap(FrtBooleanClause *bc)
-{
-    VALUE self = Data_Wrap_Struct(cBooleanClause, &frb_bc_mark, &frb_bc_free, bc);
+const rb_data_type_t frb_boolean_clause_t = {
+    .wrap_struct_name = "FrbBooleanClause",
+    .function = {
+        .dmark = frb_bc_mark,
+        .dfree = frb_bc_free,
+        .dsize = frb_boolean_clause_t_size
+    }
+};
+
+static VALUE frb_bc_alloc(VALUE rclass) {
+    FrtBooleanClause *bc = frt_bc_alloc();
+    return TypedData_Wrap_Struct(rclass, &frb_boolean_clause_t, bc);
+}
+
+static VALUE frb_bc_wrap(FrtBooleanClause *bc) {
+    VALUE self = TypedData_Wrap_Struct(cBooleanClause, &frb_boolean_clause_t, bc);
     FRT_REF(bc);
     object_add(bc, self);
     return self;
 }
 
-static FrtBCType
-frb_get_occur(VALUE roccur)
-{
+static FrtBCType frb_get_occur(VALUE roccur) {
     FrtBCType occur = FRT_BC_SHOULD;
 
     if (roccur == sym_should) {
@@ -798,8 +702,7 @@ frb_get_occur(VALUE roccur)
     } else if (roccur == sym_must_not) {
         occur = FRT_BC_MUST_NOT;
     } else {
-        rb_raise(rb_eArgError, "occur argument must be one of [:must, "
-                 ":should, :must_not]");
+        rb_raise(rb_eArgError, "occur argument must be one of [:must, :should, :must_not]");
     }
     return occur;
 }
@@ -811,20 +714,18 @@ frb_get_occur(VALUE roccur)
  *  Create a new BooleanClause object, wrapping the query +query+. +occur+
  *  must be one of +:must+, +:should+ or +:must_not+.
  */
-static VALUE
-frb_bc_init(int argc, VALUE *argv, VALUE self)
-{
+static VALUE frb_bc_init(int argc, VALUE *argv, VALUE self) {
     FrtBooleanClause *bc;
+    TypedData_Get_Struct(self, FrtBooleanClause, &frb_boolean_clause_t, bc);
     VALUE rquery, roccur;
     unsigned int occur = FRT_BC_SHOULD;
     FrtQuery *sub_q;
     if (rb_scan_args(argc, argv, "11", &rquery, &roccur) == 2) {
         occur = frb_get_occur(roccur);
     }
-    Data_Get_Struct(rquery, FrtQuery, sub_q);
+    sub_q = DATA_PTR(rquery);
     FRT_REF(sub_q);
-    bc = frt_bc_new(sub_q, occur);
-    Frt_Wrap_Struct(self, &frb_bc_mark, &frb_bc_free, bc);
+    frt_bc_init(bc, sub_q, occur);
     object_add(bc, self);
     return self;
 }
@@ -836,9 +737,7 @@ frb_bc_init(int argc, VALUE *argv, VALUE self)
  *
  *  Return the query object wrapped by this BooleanClause.
  */
-static VALUE
-frb_bc_get_query(VALUE self)
-{
+static VALUE frb_bc_get_query(VALUE self) {
     GET_BC();
     return object_get(bc->query);
 }
@@ -849,11 +748,9 @@ frb_bc_get_query(VALUE self)
  *
  *  Set the query wrapped by this BooleanClause.
  */
-static VALUE
-frb_bc_set_query(VALUE self, VALUE rquery)
-{
+static VALUE frb_bc_set_query(VALUE self, VALUE rquery) {
     GET_BC();
-    Data_Get_Struct(rquery, FrtQuery, bc->query);
+    bc->query = DATA_PTR(rquery);
     return rquery;
 }
 
@@ -864,9 +761,7 @@ frb_bc_set_query(VALUE self, VALUE rquery)
  *  Return true if this clause is required. ie, this will be true if occur was
  *  equal to +:must+.
  */
-static VALUE
-frb_bc_is_required(VALUE self)
-{
+static VALUE frb_bc_is_required(VALUE self) {
     GET_BC();
     return bc->is_required ? Qtrue : Qfalse;
 }
@@ -878,9 +773,7 @@ frb_bc_is_required(VALUE self)
  *  Return true if this clause is prohibited. ie, this will be true if occur was
  *  equal to +:must_not+.
  */
-static VALUE
-frb_bc_is_prohibited(VALUE self)
-{
+static VALUE frb_bc_is_prohibited(VALUE self) {
     GET_BC();
     return bc->is_prohibited ? Qtrue : Qfalse;
 }
@@ -892,9 +785,7 @@ frb_bc_is_prohibited(VALUE self)
  *  Set the +occur+ value for this BooleanClause. +occur+ must be one of
  *  +:must+, +:should+ or +:must_not+.
  */
-static VALUE
-frb_bc_set_occur(VALUE self, VALUE roccur)
-{
+static VALUE frb_bc_set_occur(VALUE self, VALUE roccur) {
     GET_BC();
     FrtBCType occur = frb_get_occur(roccur);
     frt_bc_set_occur(bc, occur);
@@ -910,9 +801,7 @@ frb_bc_set_occur(VALUE self, VALUE roccur)
  *  BooleanQuery#to_s. It is only used by BooleanClause#to_s and will specify
  *  whether the clause is +:must+, +:should+ or +:must_not+.
  */
-static VALUE
-frb_bc_to_s(VALUE self)
-{
+static VALUE frb_bc_to_s(VALUE self) {
     VALUE rstr;
     char *qstr, *str;
     const char *ostr = "";
@@ -945,15 +834,32 @@ frb_bc_to_s(VALUE self)
  *
  ****************************************************************************/
 
-static void
-frb_bq_mark(void *p)
-{
+static size_t frb_boolean_query_size(const void *p) {
+    return sizeof(FrtBooleanQuery);
+    (void)p;
+}
+
+static void frb_bq_mark(void *p) {
     int i;
     FrtQuery *q = (FrtQuery *)p;
     FrtBooleanQuery *bq = (FrtBooleanQuery *)q;
     for (i = 0; i < bq->clause_cnt; i++) {
         frb_gc_mark(bq->clauses[i]);
     }
+}
+
+const rb_data_type_t frb_boolean_query_t = {
+    .wrap_struct_name = "FrbBooleanQuery",
+    .function = {
+        .dmark = frb_bq_mark,
+        .dfree = frb_q_free,
+        .dsize = frb_boolean_query_size
+    }
+};
+
+static VALUE frb_bq_alloc(VALUE rclass) {
+    FrtQuery *bq = frt_bq_alloc();
+    return TypedData_Wrap_Struct(rclass, &frb_boolean_query_t, bq);
 }
 
 /*
@@ -966,17 +872,15 @@ frb_bq_mark(void *p)
  *  score. This will slightly improve performance for the query. Usually you
  *  should leave this parameter as is.
  */
-static VALUE
-frb_bq_init(int argc, VALUE *argv, VALUE self)
-{
+static VALUE frb_bq_init(int argc, VALUE *argv, VALUE self) {
     VALUE rcoord_disabled;
     bool coord_disabled = false;
     FrtQuery *q;
+    TypedData_Get_Struct(self, FrtQuery, &frb_boolean_query_t, q);
     if (rb_scan_args(argc, argv, "01", &rcoord_disabled)) {
         coord_disabled = RTEST(rcoord_disabled);
     }
-    q = frt_bq_new(coord_disabled);
-    Frt_Wrap_Struct(self, &frb_bq_mark, &frb_q_free, q);
+    q = frt_bq_init(q, coord_disabled);
     object_add(q, self);
     return self;
 }
@@ -1002,9 +906,7 @@ frb_bq_init(int argc, VALUE *argv, VALUE self)
  *            [:must, :should, :must_not]
  *  returns:: BooleanClause which was added
  */
-static VALUE
-frb_bq_add_query(int argc, VALUE *argv, VALUE self)
-{
+static VALUE frb_bq_add_query(int argc, VALUE *argv, VALUE self) {
     GET_Q();
     VALUE rquery, roccur;
     FrtBCType occur = FRT_BC_SHOULD;
@@ -1018,17 +920,15 @@ frb_bq_add_query(int argc, VALUE *argv, VALUE self)
     if (klass == cBooleanClause) {
         FrtBooleanClause *bc = (FrtBooleanClause *)DATA_PTR(rquery);
         if (argc > 1) {
-            rb_warning("Second argument to BooleanQuery#add is ignored "
-                       "when adding BooleanClause");
+            rb_warning("Second argument to BooleanQuery#add is ignored when adding BooleanClause");
         }
         frt_bq_add_clause(q, bc);
         return rquery;
     } else if (TYPE(rquery) == T_DATA) {
-        Data_Get_Struct(rquery, FrtQuery, sub_q);
+        sub_q = DATA_PTR(rquery);
         return frb_bc_wrap(frt_bq_add_query(q, sub_q, occur));
     } else {
-        rb_raise(rb_eArgError, "Cannot add %s to a BooleanQuery",
-                 rb_class2name(klass));
+        rb_raise(rb_eArgError, "Cannot add %s to a BooleanQuery", rb_class2name(klass));
     }
     return self;
 }
@@ -1039,10 +939,25 @@ frb_bq_add_query(int argc, VALUE *argv, VALUE self)
  *
  ****************************************************************************/
 
-static void
-get_range_params(VALUE roptions, char **lterm, char **uterm,
-                 bool *include_lower, bool *include_upper)
-{
+static size_t frb_range_query_size(const void *p) {
+    return sizeof(FrtRangeQuery);
+    (void)p;
+}
+
+const rb_data_type_t frb_range_query_t = {
+    .wrap_struct_name = "FrbRangeQuery",
+    .function = {
+        .dfree = frb_q_free,
+        .dsize = frb_range_query_size
+    }
+};
+
+static VALUE frb_rq_alloc(VALUE rclass) {
+    FrtQuery *rq = frt_rq_alloc();
+    return TypedData_Wrap_Struct(rclass, &frb_range_query_t, rq);
+}
+
+static void get_range_params(VALUE roptions, char **lterm, char **uterm, bool *include_lower, bool *include_upper) {
     VALUE v;
     Check_Type(roptions, T_HASH);
     if (Qnil != (v = rb_hash_aref(roptions, sym_lower))) {
@@ -1120,20 +1035,15 @@ get_range_params(VALUE roptions, char **lterm, char **uterm,
  *    q = RangeQuery.new(:date, :>= => "200501", :<= => 200502)
  *
  */
-static VALUE
-frb_rq_init(VALUE self, VALUE rfield, VALUE roptions)
-{
+static VALUE frb_rq_init(VALUE self, VALUE rfield, VALUE roptions) {
     FrtQuery *q;
     char *lterm = NULL;
     char *uterm = NULL;
     bool include_lower = false;
     bool include_upper = false;
-
+    TypedData_Get_Struct(self, FrtQuery, &frb_range_query_t, q);
     get_range_params(roptions, &lterm, &uterm, &include_lower, &include_upper);
-    q = frt_rq_new(frb_field(rfield),
-               lterm, uterm,
-               include_lower, include_upper);
-    Frt_Wrap_Struct(self, NULL, &frb_q_free, q);
+    frt_rq_init(q, frb_field(rfield), lterm, uterm, include_lower, include_upper);
     object_add(q, self);
     return self;
 }
@@ -1143,6 +1053,24 @@ frb_rq_init(VALUE self, VALUE rfield, VALUE roptions)
  * TypedRangeQuery Methods
  *
  ****************************************************************************/
+
+static size_t frb_typed_range_query_size(const void *p) {
+    return sizeof(FrtRangeQuery);
+    (void)p;
+}
+
+const rb_data_type_t frb_typed_range_query_t = {
+    .wrap_struct_name = "FrbTypedRangeQuery",
+    .function = {
+        .dfree = frb_q_free,
+        .dsize = frb_typed_range_query_size
+    }
+};
+
+static VALUE frb_trq_alloc(VALUE rclass) {
+    FrtQuery *trq = frt_trq_alloc();
+    return TypedData_Wrap_Struct(rclass, &frb_typed_range_query_t, trq);
+}
 
 /*
  *  call-seq:
@@ -1172,20 +1100,15 @@ frb_rq_init(VALUE self, VALUE rfield, VALUE roptions)
  *    # is equivalent to
  *    q = TypedRangeQuery.new(:date, :>= => "-12.32", :<= => 0.21)
  */
-static VALUE
-frb_trq_init(VALUE self, VALUE rfield, VALUE roptions)
-{
+static VALUE frb_trq_init(VALUE self, VALUE rfield, VALUE roptions) {
     FrtQuery *q;
     char *lterm = NULL;
     char *uterm = NULL;
     bool include_lower = false;
     bool include_upper = false;
-
+    TypedData_Get_Struct(self, FrtQuery, &frb_typed_range_query_t, q);
     get_range_params(roptions, &lterm, &uterm, &include_lower, &include_upper);
-    q = frt_trq_new(frb_field(rfield),
-                lterm, uterm,
-                include_lower, include_upper);
-    Frt_Wrap_Struct(self, NULL, &frb_q_free, q);
+    q = frt_trq_init(q, frb_field(rfield), lterm, uterm, include_lower, include_upper);
     object_add(q, self);
     return self;
 }
@@ -1196,6 +1119,24 @@ frb_trq_init(VALUE self, VALUE rfield, VALUE roptions)
  *
  ****************************************************************************/
 
+static size_t frb_phrase_query_size(const void *p) {
+    return sizeof(FrtPhraseQuery);
+    (void)p;
+}
+
+const rb_data_type_t frb_phrase_query_t = {
+    .wrap_struct_name = "FrbPhraseQuery",
+    .function = {
+        .dfree = frb_q_free,
+        .dsize = frb_phrase_query_size
+    }
+};
+
+static VALUE frb_phq_alloc(VALUE rclass) {
+    FrtQuery *phq = frt_phq_alloc();
+    return TypedData_Wrap_Struct(rclass, &frb_phrase_query_t, phq);
+}
+
 /*
  *  call-seq:
  *     PhraseQuery.new(field, slop = 0) -> phrase_query
@@ -1203,17 +1144,15 @@ frb_trq_init(VALUE self, VALUE rfield, VALUE roptions)
  *  Create a new PhraseQuery on the field +field+. You need to add terms to
  *  the query it will do anything of value. See PhraseQuery#add_term.
  */
-static VALUE
-frb_phq_init(int argc, VALUE *argv, VALUE self)
-{
+static VALUE frb_phq_init(int argc, VALUE *argv, VALUE self) {
     VALUE rfield, rslop;
     FrtQuery *q;
+    TypedData_Get_Struct(self, FrtQuery, &frb_phrase_query_t, q);
     rb_scan_args(argc, argv, "11", &rfield, &rslop);
-    q = frt_phq_new(frb_field(rfield));
+    frt_phq_init(q, frb_field(rfield));
     if (argc == 2) {
         ((FrtPhraseQuery *)q)->slop = FIX2INT(rslop);
     }
-    Frt_Wrap_Struct(self, NULL, &frb_q_free, q);
     object_add(q, self);
     return self;
 }
@@ -1309,6 +1248,24 @@ frb_phq_set_slop(VALUE self, VALUE rslop)
  *
  ****************************************************************************/
 
+static size_t frb_prefix_query_size(const void *p) {
+    return sizeof(FrtPrefixQuery);
+    (void)p;
+}
+
+const rb_data_type_t frb_prefix_query_t = {
+    .wrap_struct_name = "FrbPrefixQuery",
+    .function = {
+        .dfree = frb_q_free,
+        .dsize = frb_prefix_query_size
+    }
+};
+
+static VALUE frb_prq_alloc(VALUE rclass) {
+    FrtQuery *pq = frt_prefixq_alloc();
+    return TypedData_Wrap_Struct(rclass, &frb_prefix_query_t, pq);
+}
+
 /*
  *  call-seq:
  *     PrefixQuery.new(field, prefix, options = {}) -> prefix-query
@@ -1325,10 +1282,19 @@ frb_phq_set_slop(VALUE self, VALUE rslop)
  *  +:max_terms+ which limits the number of terms that get added to the query.
  *  By default it is set to 512.
  */
-static VALUE
-frb_prq_init(int argc, VALUE *argv, VALUE self)
-{
-    return frb_mtq_init_specific(argc, argv, self, &frt_prefixq_new);
+static VALUE frb_prq_init(int argc, VALUE *argv, VALUE self) {
+    VALUE rfield, rterm, rmax_terms;
+    int max_terms = FIX2INT(rb_cvar_get(cMultiTermQuery, id_default_max_terms));
+    FrtQuery *q;
+    TypedData_Get_Struct(self, FrtQuery, &frb_prefix_query_t, q);
+    if (rb_scan_args(argc, argv, "21", &rfield, &rterm, &rmax_terms) == 3) {
+        max_terms = get_max_terms(rmax_terms, max_terms);
+    }
+
+    frt_prefixq_init(q, frb_field(rfield), StringValuePtr(rterm));
+    FrtMTQMaxTerms(q) = max_terms;
+    object_add(q, self);
+    return self;
 }
 
 /****************************************************************************
@@ -1336,6 +1302,24 @@ frb_prq_init(int argc, VALUE *argv, VALUE self)
  * WildcardQuery Methods
  *
  ****************************************************************************/
+
+static size_t frb_wildcard_query_size(const void *p) {
+    return sizeof(FrtWildCardQuery);
+    (void)p;
+}
+
+const rb_data_type_t frb_wilcard_query_t = {
+    .wrap_struct_name = "FrbWildcardQuery",
+    .function = {
+        .dfree = frb_q_free,
+        .dsize = frb_wildcard_query_size
+    }
+};
+
+static VALUE frb_wcq_alloc(VALUE rclass) {
+    FrtQuery *wq = frt_wcq_alloc();
+    return TypedData_Wrap_Struct(rclass, &frb_wilcard_query_t, wq);
+}
 
 /*
  *  call-seq:
@@ -1355,10 +1339,19 @@ frb_prq_init(int argc, VALUE *argv, VALUE self)
  *  set +:max_terms+ which limits the number of terms that get added to the
  *  query.  By default it is set to 512.
  */
-static VALUE
-frb_wcq_init(int argc, VALUE *argv, VALUE self)
-{
-    return frb_mtq_init_specific(argc, argv, self, &frt_wcq_new);
+static VALUE frb_wcq_init(int argc, VALUE *argv, VALUE self) {
+    VALUE rfield, rterm, rmax_terms;
+    int max_terms = FIX2INT(rb_cvar_get(cMultiTermQuery, id_default_max_terms));
+    FrtQuery *q;
+    TypedData_Get_Struct(self, FrtQuery, &frb_wilcard_query_t, q);
+    if (rb_scan_args(argc, argv, "21", &rfield, &rterm, &rmax_terms) == 3) {
+        max_terms = get_max_terms(rmax_terms, max_terms);
+    }
+
+    frt_wcq_init(q, frb_field(rfield), StringValuePtr(rterm));
+    FrtMTQMaxTerms(q) = max_terms;
+    object_add(q, self);
+    return self;
 }
 
 /****************************************************************************
@@ -1366,6 +1359,24 @@ frb_wcq_init(int argc, VALUE *argv, VALUE self)
  * FuzzyQuery Methods
  *
  ****************************************************************************/
+
+static size_t frb_fuzzy_query_size(const void *p) {
+    return sizeof(FrtFuzzyQuery);
+    (void)p;
+}
+
+const rb_data_type_t frb_fuzzy_query_t = {
+    .wrap_struct_name = "FrbFuzzyQuery",
+    .function = {
+        .dfree = frb_q_free,
+        .dsize = frb_fuzzy_query_size
+    }
+};
+
+static VALUE frb_fq_alloc(VALUE rclass) {
+    FrtQuery *fq = frt_fuzq_alloc();
+    return TypedData_Wrap_Struct(rclass, &frb_fuzzy_query_t, fq);
+}
 
 /*
  *  call-seq:
@@ -1407,18 +1418,12 @@ frb_wcq_init(int argc, VALUE *argv, VALUE self)
  *                    not usually a problem with FuzzyQueries unless you set
  *                    +:min_similarity+ to a very low value.
  */
-static VALUE
-frb_fq_init(int argc, VALUE *argv, VALUE self)
-{
+static VALUE frb_fq_init(int argc, VALUE *argv, VALUE self) {
     FrtQuery *q;
     VALUE rfield, rterm, roptions;
-    float min_sim =
-        (float)NUM2DBL(rb_cvar_get(cFuzzyQuery, id_default_min_similarity));
-    int pre_len =
-        FIX2INT(rb_cvar_get(cFuzzyQuery, id_default_prefix_length));
-    int max_terms =
-        FIX2INT(rb_cvar_get(cMultiTermQuery, id_default_max_terms));
-
+    float min_sim = (float)NUM2DBL(rb_cvar_get(cFuzzyQuery, id_default_min_similarity));
+    int pre_len = FIX2INT(rb_cvar_get(cFuzzyQuery, id_default_prefix_length));
+    int max_terms = FIX2INT(rb_cvar_get(cMultiTermQuery, id_default_max_terms));
 
     if (rb_scan_args(argc, argv, "21", &rfield, &rterm, &roptions) >= 3) {
         VALUE v;
@@ -1435,24 +1440,18 @@ frb_fq_init(int argc, VALUE *argv, VALUE self)
     }
 
     if (min_sim >= 1.0f) {
-        rb_raise(rb_eArgError,
-                 "%f >= 1.0. :min_similarity must be < 1.0", min_sim);
+        rb_raise(rb_eArgError, "%f >= 1.0. :min_similarity must be < 1.0", min_sim);
     } else if (min_sim < 0.0f) {
-        rb_raise(rb_eArgError,
-                 "%f < 0.0. :min_similarity must be > 0.0", min_sim);
+        rb_raise(rb_eArgError, "%f < 0.0. :min_similarity must be > 0.0", min_sim);
     }
     if (pre_len < 0) {
-        rb_raise(rb_eArgError,
-                 "%d < 0. :prefix_length must be >= 0", pre_len);
+        rb_raise(rb_eArgError, "%d < 0. :prefix_length must be >= 0", pre_len);
     }
     if (max_terms < 0) {
-        rb_raise(rb_eArgError,
-                 "%d < 0. :max_terms must be >= 0", max_terms);
+        rb_raise(rb_eArgError, "%d < 0. :max_terms must be >= 0", max_terms);
     }
-
-    q = frt_fuzq_new_conf(frb_field(rfield), StringValuePtr(rterm),
-                      min_sim, pre_len, max_terms);
-    Frt_Wrap_Struct(self, NULL, &frb_q_free, q);
+    TypedData_Get_Struct(self, FrtQuery, &frb_fuzzy_query_t, q);
+    frt_fuzq_init_conf(q, frb_field(rfield), StringValuePtr(rterm), min_sim, pre_len, max_terms);
     object_add(q, self);
     return self;
 }
@@ -1557,13 +1556,22 @@ frb_fq_set_dpl(VALUE self, VALUE val)
  *
  ****************************************************************************/
 
-static VALUE
-frb_maq_alloc(VALUE klass)
-{
-    FrtQuery *q = frt_maq_new();
-    VALUE self = Data_Wrap_Struct(klass, NULL, &frb_q_free, q);
-    object_add(q, self);
-    return self;
+static size_t frb_match_all_query_size(const void *p) {
+    return sizeof(FrtQuery);
+    (void)p;
+}
+
+const rb_data_type_t frb_match_all_query_t = {
+    .wrap_struct_name = "FrbMatchAllQuery",
+    .function = {
+        .dfree = frb_q_free,
+        .dsize = frb_match_all_query_size
+    }
+};
+
+static VALUE frb_maq_alloc(VALUE rclass) {
+    FrtQuery *q = frt_maq_alloc();
+    return TypedData_Wrap_Struct(rclass, &frb_match_all_query_t, q);
 }
 
 /*
@@ -1572,9 +1580,11 @@ frb_maq_alloc(VALUE klass)
  *
  *  Create a query which matches all documents.
  */
-static VALUE
-frb_maq_init(VALUE self)
-{
+static VALUE frb_maq_init(VALUE self) {
+    FrtQuery *q;
+    TypedData_Get_Struct(self, FrtQuery, &frb_match_all_query_t, q);
+    frt_maq_init(q);
+    object_add(q, self);
     return self;
 }
 
@@ -1584,6 +1594,24 @@ frb_maq_init(VALUE self)
  *
  ****************************************************************************/
 
+static size_t frb_constant_score_query_size(const void *p) {
+    return sizeof(FrtConstantScoreQuery);
+    (void)p;
+}
+
+const rb_data_type_t frb_constant_score_query_t = {
+    .wrap_struct_name = "FrbConstantScoreQuery",
+    .function = {
+        .dfree = frb_q_free,
+        .dsize = frb_constant_score_query_size
+    }
+};
+
+static VALUE frb_csq_alloc(VALUE rclass) {
+    FrtQuery *csq = frt_csq_alloc();
+    return TypedData_Wrap_Struct(rclass, &frb_constant_score_query_t, csq);
+}
+
 /*
  *  call-seq:
  *     ConstantScoreQuery.new(filter) -> query
@@ -1591,15 +1619,12 @@ frb_maq_init(VALUE self)
  *  Create a ConstantScoreQuery which uses +filter+ to match documents giving
  *  each document a constant score.
  */
-static VALUE
-frb_csq_init(VALUE self, VALUE rfilter)
-{
+static VALUE frb_csq_init(VALUE self, VALUE rfilter) {
     FrtQuery *q;
-    FrtFilter *filter;
-    Data_Get_Struct(rfilter, FrtFilter, filter);
-    q = frt_csq_new(filter);
+    FrtFilter *filter = DATA_PTR(rfilter);
+    TypedData_Get_Struct(self, FrtQuery, &frb_constant_score_query_t, q);
+    frt_csq_init(q, filter);
 
-    Frt_Wrap_Struct(self, NULL, &frb_q_free, q);
     object_add(q, self);
     return self;
 }
@@ -1610,12 +1635,29 @@ frb_csq_init(VALUE self, VALUE rfilter)
  *
  ****************************************************************************/
 
-static void
-frb_fqq_mark(void *p)
-{
+static size_t frb_filtered_query_size(const void *p) {
+    return sizeof(FrtFilteredQuery);
+    (void)p;
+}
+
+static void frb_fqq_mark(void *p) {
     FrtFilteredQuery *fq = (FrtFilteredQuery *)p;
     frb_gc_mark(fq->query);
     frb_gc_mark(fq->filter);
+}
+
+const rb_data_type_t frb_filtered_query_t = {
+    .wrap_struct_name = "FrbFilteredQuery",
+    .function = {
+        .dmark = frb_fqq_mark,
+        .dfree = frb_q_free,
+        .dsize = frb_filtered_query_size
+    }
+};
+
+static VALUE frb_fqq_alloc(VALUE rclass) {
+    FrtQuery *fqq = frt_fq_alloc();
+    return TypedData_Wrap_Struct(rclass, &frb_filtered_query_t, fqq);
 }
 
 /*
@@ -1624,17 +1666,14 @@ frb_fqq_mark(void *p)
  *
  *  Create a new FilteredQuery which filters +query+ with +filter+.
  */
-static VALUE
-frb_fqq_init(VALUE self, VALUE rquery, VALUE rfilter)
-{
-    FrtQuery *sq, *q;
-    FrtFilter *f;
-    Data_Get_Struct(rquery, FrtQuery, sq);
-    Data_Get_Struct(rfilter, FrtFilter, f);
-    q = frt_fq_new(sq, f);
+static VALUE frb_fqq_init(VALUE self, VALUE rquery, VALUE rfilter) {
+    FrtQuery *q;
+    FrtFilter *f = DATA_PTR(rfilter);
+    FrtQuery *sq = DATA_PTR(rquery);
+    TypedData_Get_Struct(self, FrtQuery, &frb_filtered_query_t, q);
+    frt_fq_init(q, sq, f);
     FRT_REF(sq);
     FRT_REF(f);
-    Frt_Wrap_Struct(self, &frb_fqq_mark, &frb_q_free, q);
     object_add(q, self);
     return self;
 }
@@ -1645,6 +1684,24 @@ frb_fqq_init(VALUE self, VALUE rquery, VALUE rfilter)
  *
  ****************************************************************************/
 
+static size_t frb_span_term_query_size(const void *p) {
+    return sizeof(FrtSpanTermQuery);
+    (void)p;
+}
+
+const rb_data_type_t frb_span_term_query_t = {
+    .wrap_struct_name = "FrbSpanTermQuery",
+    .function = {
+        .dfree = frb_q_free,
+        .dsize = frb_span_term_query_size
+    }
+};
+
+static VALUE frb_spantq_alloc(VALUE rclass) {
+    FrtQuery *stq = frt_spantq_alloc();
+    return TypedData_Wrap_Struct(rclass, &frb_span_term_query_t, stq);
+}
+
 /*
  *  call-seq:
  *     SpanTermQuery.new(field, term) -> query
@@ -1652,11 +1709,10 @@ frb_fqq_init(VALUE self, VALUE rquery, VALUE rfilter)
  *  Create a new SpanTermQuery which matches all documents with the term
  *  +term+ in the field +field+.
  */
-static VALUE
-frb_spantq_init(VALUE self, VALUE rfield, VALUE rterm)
-{
-    FrtQuery *q = frt_spantq_new(frb_field(rfield), StringValuePtr(rterm));
-    Frt_Wrap_Struct(self, NULL, &frb_q_free, q);
+static VALUE frb_spantq_init(VALUE self, VALUE rfield, VALUE rterm) {
+    FrtQuery *q;
+    TypedData_Get_Struct(self, FrtQuery, &frb_span_term_query_t, q);
+    frt_spantq_init(q, frb_field(rfield), StringValuePtr(rterm));
     object_add(q, self);
     return self;
 }
@@ -1667,6 +1723,24 @@ frb_spantq_init(VALUE self, VALUE rfield, VALUE rterm)
  *
  ****************************************************************************/
 
+static size_t frb_span_multi_term_query_size(const void *p) {
+    return sizeof(FrtSpanMultiTermQuery);
+    (void)p;
+}
+
+const rb_data_type_t frb_span_multi_term_query_t = {
+    .wrap_struct_name = "FrbSpanMultiTermQuery",
+    .function = {
+        .dfree = frb_q_free,
+        .dsize = frb_span_multi_term_query_size
+    }
+};
+
+static VALUE frb_spanmtq_alloc(VALUE rclass) {
+    FrtQuery *smtq = frt_spanmtq_alloc();
+    return TypedData_Wrap_Struct(rclass, &frb_span_multi_term_query_t, smtq);
+}
+
 /*
  *  call-seq:
  *     SpanMultiTermQuery.new(field, terms) -> query
@@ -1674,15 +1748,14 @@ frb_spantq_init(VALUE self, VALUE rfield, VALUE rterm)
  *  Create a new SpanMultiTermQuery which matches all documents with the terms
  *  +terms+ in the field +field+. +terms+ should be an array of Strings.
  */
-static VALUE
-frb_spanmtq_init(VALUE self, VALUE rfield, VALUE rterms)
-{
-    FrtQuery *q = frt_spanmtq_new(frb_field(rfield));
+static VALUE frb_spanmtq_init(VALUE self, VALUE rfield, VALUE rterms) {
+    FrtQuery *q;
+    TypedData_Get_Struct(self, FrtQuery, &frb_span_multi_term_query_t, q);
+    frt_spanmtq_init(q, frb_field(rfield));
     int i;
     for (i = RARRAY_LEN(rterms) - 1; i >= 0; i--) {
         frt_spanmtq_add_term(q, StringValuePtr(RARRAY_PTR(rterms)[i]));
     }
-    Frt_Wrap_Struct(self, NULL, &frb_q_free, q);
     object_add(q, self);
     return self;
 }
@@ -1693,6 +1766,24 @@ frb_spanmtq_init(VALUE self, VALUE rfield, VALUE rterms)
  *
  ****************************************************************************/
 
+static size_t frb_span_prefix_query_size(const void *p) {
+    return sizeof(FrtSpanPrefixQuery);
+    (void)p;
+}
+
+const rb_data_type_t frb_span_prefix_query_t = {
+    .wrap_struct_name = "FrbSpanPrefixQuery",
+    .function = {
+        .dfree = frb_q_free,
+        .dsize = frb_span_prefix_query_size
+    }
+};
+
+static VALUE frb_spanprq_alloc(VALUE rclass) {
+    FrtQuery *spq = frt_spanprq_alloc();
+    return TypedData_Wrap_Struct(rclass, &frb_span_prefix_query_t, spq);
+}
+
 /*
  *  call-seq:
  *     SpanPrefixQuery.new(field, prefix, max_terms = 256) -> query
@@ -1700,18 +1791,16 @@ frb_spanmtq_init(VALUE self, VALUE rfield, VALUE rterms)
  *  Create a new SpanPrefixQuery which matches all documents with the prefix
  *  +prefix+ in the field +field+.
  */
-static VALUE
-frb_spanprq_init(int argc, VALUE *argv, VALUE self)
-{
+static VALUE frb_spanprq_init(int argc, VALUE *argv, VALUE self) {
     VALUE rfield, rprefix, rmax_terms;
     int max_terms = FRT_SPAN_PREFIX_QUERY_MAX_TERMS;
     FrtQuery *q;
+    TypedData_Get_Struct(self, FrtQuery, &frb_span_prefix_query_t, q);
     if (rb_scan_args(argc, argv, "21", &rfield, &rprefix, &rmax_terms) == 3) {
         max_terms = FIX2INT(rmax_terms);
     }
-    q = frt_spanprq_new(frb_field(rfield), StringValuePtr(rprefix));
+    frt_spanprq_init(q, frb_field(rfield), StringValuePtr(rprefix));
     ((FrtSpanPrefixQuery *)q)->max_terms = max_terms;
-    Frt_Wrap_Struct(self, NULL, &frb_q_free, q);
     object_add(q, self);
     return self;
 }
@@ -1722,6 +1811,24 @@ frb_spanprq_init(int argc, VALUE *argv, VALUE self)
  *
  ****************************************************************************/
 
+static size_t frb_span_first_query_size(const void *p) {
+    return sizeof(FrtSpanFirstQuery);
+    (void)p;
+}
+
+const rb_data_type_t frb_span_first_query_t = {
+    .wrap_struct_name = "FrbSpanFirstQuery",
+    .function = {
+        .dfree = frb_q_free,
+        .dsize = frb_span_first_query_size
+    }
+};
+
+static VALUE frb_spanfq_alloc(VALUE rclass) {
+    FrtQuery *sfq = frt_spanfq_alloc();
+    return TypedData_Wrap_Struct(rclass, &frb_span_first_query_t, sfq);
+}
+
 /*
  *  call-seq:
  *     SpanFirstQuery.new(span_query, end) -> query
@@ -1730,14 +1837,11 @@ frb_spanprq_init(int argc, VALUE *argv, VALUE self)
  *  matches before +end+ where +end+ is a byte-offset from the start of the
  *  field
  */
-static VALUE
-frb_spanfq_init(VALUE self, VALUE rmatch, VALUE rend)
-{
+static VALUE frb_spanfq_init(VALUE self, VALUE rmatch, VALUE rend) {
     FrtQuery *q;
-    FrtQuery *match;
-    Data_Get_Struct(rmatch, FrtQuery, match);
-    q = frt_spanfq_new(match, FIX2INT(rend));
-    Frt_Wrap_Struct(self, NULL, &frb_q_free, q);
+    FrtQuery *match = DATA_PTR(rmatch);
+    TypedData_Get_Struct(self, FrtQuery, &frb_span_first_query_t, q);
+    frt_spanfq_init(q, match, FIX2INT(rend));
     object_add(q, self);
     return self;
 }
@@ -1748,14 +1852,31 @@ frb_spanfq_init(VALUE self, VALUE rmatch, VALUE rend)
  *
  ****************************************************************************/
 
-static void
-frb_spannq_mark(void *p)
-{
+static size_t frb_span_near_query_size(const void *p) {
+    return sizeof(FrtSpanNearQuery);
+    (void)p;
+}
+
+static void frb_spannq_mark(void *p) {
     int i;
     FrtSpanNearQuery *snq = (FrtSpanNearQuery *)p;
     for (i = 0; i < snq->c_cnt; i++) {
         frb_gc_mark(snq->clauses[i]);
     }
+}
+
+const rb_data_type_t frb_span_near_query_t = {
+    .wrap_struct_name = "FrbSpanNearQuery",
+    .function = {
+        .dmark = frb_spannq_mark,
+        .dfree = frb_q_free,
+        .dsize = frb_span_near_query_size
+    }
+};
+
+static VALUE frb_spannq_alloc(VALUE rclass) {
+    FrtQuery *snq = frt_spannq_alloc();
+    return TypedData_Wrap_Struct(rclass, &frb_span_near_query_t, snq);
 }
 
 /*
@@ -1780,14 +1901,12 @@ frb_spannq_mark(void *p)
  *              occur in the order they were added to the query. When slop is
  *              set to 0, this parameter will make no difference.
  */
-static VALUE
-frb_spannq_init(int argc, VALUE *argv, VALUE self)
-{
+static VALUE frb_spannq_init(int argc, VALUE *argv, VALUE self) {
     FrtQuery *q;
     VALUE roptions;
     int slop = 0;
     bool in_order = false;
-
+    TypedData_Get_Struct(self, FrtQuery, &frb_span_near_query_t, q);
     if (rb_scan_args(argc, argv, "01", &roptions) > 0) {
         VALUE v;
         if (Qnil != (v = rb_hash_aref(roptions, sym_slop))) {
@@ -1797,7 +1916,7 @@ frb_spannq_init(int argc, VALUE *argv, VALUE self)
             in_order = RTEST(v);
         }
     }
-    q = frt_spannq_new(slop, in_order);
+    frt_spannq_init(q, slop, in_order);
     if (argc > 0) {
         VALUE v;
         if (Qnil != (v = rb_hash_aref(roptions, sym_clauses))) {
@@ -1805,13 +1924,11 @@ frb_spannq_init(int argc, VALUE *argv, VALUE self)
             FrtQuery *clause;
             Check_Type(v, T_ARRAY);
             for (i = 0; i < RARRAY_LEN(v); i++) {
-                Data_Get_Struct(RARRAY_PTR(v)[i], FrtQuery, clause);
+                clause = DATA_PTR(RARRAY_PTR(v)[i]);
                 frt_spannq_add_clause(q, clause);
             }
         }
     }
-
-    Frt_Wrap_Struct(self, &frb_spannq_mark, &frb_q_free, q);
     object_add(q, self);
     return self;
 }
@@ -1825,12 +1942,9 @@ frb_spannq_init(int argc, VALUE *argv, VALUE self)
  *  are added to the query which is important for matching. Note that clauses
  *  must be SpanQueries, not other types of query.
  */
-static VALUE
-frb_spannq_add(VALUE self, VALUE rclause)
-{
+static VALUE frb_spannq_add(VALUE self, VALUE rclause) {
     GET_Q();
-    FrtQuery *clause;
-    Data_Get_Struct(rclause, FrtQuery, clause);
+    FrtQuery *clause = DATA_PTR(rclause);
     frt_spannq_add_clause(q, clause);
     return self;
 }
@@ -1841,14 +1955,31 @@ frb_spannq_add(VALUE self, VALUE rclause)
  *
  ****************************************************************************/
 
-static void
-frb_spanoq_mark(void *p)
-{
+static size_t frb_span_or_query_size(const void *p) {
+    return sizeof(FrtSpanOrQuery);
+    (void)p;
+}
+
+static void frb_spanoq_mark(void *p) {
     int i;
     FrtSpanOrQuery *soq = (FrtSpanOrQuery *)p;
     for (i = 0; i < soq->c_cnt; i++) {
         frb_gc_mark(soq->clauses[i]);
     }
+}
+
+const rb_data_type_t frb_span_or_query_t = {
+    .wrap_struct_name = "FrbSpanOrQuery",
+    .function = {
+        .dmark = frb_spanoq_mark,
+        .dfree = frb_q_free,
+        .dsize = frb_span_or_query_size
+    }
+};
+
+static VALUE frb_spanoq_alloc(VALUE rclass) {
+    FrtQuery *soq = frt_spanoq_alloc();
+    return TypedData_Wrap_Struct(rclass, &frb_span_or_query_t, soq);
 }
 
 /*
@@ -1859,23 +1990,20 @@ frb_spanoq_mark(void *p)
  *  clauses with the occur value of :should. The difference is that it can be
  *  passed to other SpanQuerys like SpanNearQuery.
  */
-static VALUE
-frb_spanoq_init(int argc, VALUE *argv, VALUE self)
-{
+static VALUE frb_spanoq_init(int argc, VALUE *argv, VALUE self) {
     FrtQuery *q;
     VALUE rclauses;
-
-    q = frt_spanoq_new();
+    TypedData_Get_Struct(self, FrtQuery, &frb_span_or_query_t, q);
+    frt_spanoq_init(q);
     if (rb_scan_args(argc, argv, "01", &rclauses) > 0) {
         int i;
         FrtQuery *clause;
         Check_Type(rclauses, T_ARRAY);
         for (i = 0; i < RARRAY_LEN(rclauses); i++) {
-            Data_Get_Struct(RARRAY_PTR(rclauses)[i], FrtQuery, clause);
+            clause = DATA_PTR(RARRAY_PTR(rclauses)[i]);
             frt_spanoq_add_clause(q, clause);
         }
     }
-    Frt_Wrap_Struct(self, &frb_spanoq_mark, &frb_q_free, q);
     object_add(q, self);
     return self;
 }
@@ -1888,12 +2016,9 @@ frb_spanoq_init(int argc, VALUE *argv, VALUE self)
  *  Add a clause to the SpanOrQuery. Note that clauses must be SpanQueries,
  *  not other types of query.
  */
-static VALUE
-frb_spanoq_add(VALUE self, VALUE rclause)
-{
+static VALUE frb_spanoq_add(VALUE self, VALUE rclause) {
     GET_Q();
-    FrtQuery *clause;
-    Data_Get_Struct(rclause, FrtQuery, clause);
+    FrtQuery *clause = DATA_PTR(rclause);
     frt_spanoq_add_clause(q, clause);
     return self;
 }
@@ -1904,12 +2029,29 @@ frb_spanoq_add(VALUE self, VALUE rclause)
  *
  ****************************************************************************/
 
-static void
-frb_spanxq_mark(void *p)
-{
+static size_t frb_span_not_query_size(const void *p) {
+    return sizeof(FrtSpanNotQuery);
+    (void)p;
+}
+
+static void frb_spanxq_mark(void *p) {
     FrtSpanNotQuery *sxq = (FrtSpanNotQuery *)p;
     frb_gc_mark(sxq->inc);
     frb_gc_mark(sxq->exc);
+}
+
+const rb_data_type_t frb_span_not_query_t = {
+    .wrap_struct_name = "FrbSpanNotQuery",
+    .function = {
+        .dmark = frb_spanxq_mark,
+        .dfree = frb_q_free,
+        .dsize = frb_span_not_query_size
+    }
+};
+
+static VALUE frb_spanxq_alloc(VALUE rclass) {
+    FrtQuery *snq = frt_spanxq_alloc();
+    return TypedData_Wrap_Struct(rclass, &frb_span_not_query_t, snq);
 }
 
 /*
@@ -1919,14 +2061,12 @@ frb_spanxq_mark(void *p)
  *  Create a new SpanNotQuery which matches all documents which match
  *  +include_query+ and don't match +exclude_query+.
  */
-static VALUE
-frb_spanxq_init(VALUE self, VALUE rinc, VALUE rexc)
-{
+static VALUE frb_spanxq_init(VALUE self, VALUE rinc, VALUE rexc) {
     FrtQuery *q;
     Check_Type(rinc, T_DATA);
     Check_Type(rexc, T_DATA);
-    q = frt_spanxq_new(DATA_PTR(rinc), DATA_PTR(rexc));
-    Frt_Wrap_Struct(self, &frb_spanxq_mark, &frb_q_free, q);
+    TypedData_Get_Struct(self, FrtQuery, &frb_span_not_query_t, q);
+    frt_spanxq_init(q, DATA_PTR(rinc), DATA_PTR(rexc));
     object_add(q, self);
     return self;
 }
@@ -1937,9 +2077,7 @@ frb_spanxq_init(VALUE self, VALUE rinc, VALUE rexc)
  *
  ****************************************************************************/
 
-static void
-frb_f_free(void *p)
-{
+static void frb_f_free(void *p) {
     object_del(p);
     frt_filt_deref((FrtFilter *)p);
 }
@@ -1974,13 +2112,11 @@ extern VALUE frb_get_bv(FrtBitVector *bv);
  *  Get the bit_vector used by this filter. This method will usually be used
  *  to group filters or apply filters to other filters.
  */
-static VALUE
-frb_f_get_bits(VALUE self, VALUE rindex_reader)
-{
+static VALUE frb_f_get_bits(VALUE self, VALUE rindex_reader) {
     FrtBitVector *bv;
     FrtIndexReader *ir;
     GET_F();
-    Data_Get_Struct(rindex_reader, FrtIndexReader, ir);
+    TypedData_Get_Struct(rindex_reader, FrtIndexReader, &frb_index_reader_t, ir);
     bv = frt_filt_get_bv(f, ir);
     return frb_get_bv(bv);
 }
@@ -1991,6 +2127,23 @@ frb_f_get_bits(VALUE self, VALUE rindex_reader)
  *
  ****************************************************************************/
 
+static size_t frb_range_filter_size(const void *p) {
+    return sizeof(FrtRangeFilter);
+    (void)p;
+}
+
+const rb_data_type_t frb_range_filter_t = {
+    .wrap_struct_name = "FrbRangeFilter",
+    .function = {
+        .dfree = frb_f_free,
+        .dsize = frb_range_filter_size
+    }
+};
+
+static VALUE frb_rf_alloc(VALUE rclass) {
+    FrtFilter *rf = frt_rfilt_alloc();
+    return TypedData_Wrap_Struct(rclass, &frb_range_filter_t, rf);
+}
 
 /*
  *  call-seq:
@@ -2014,9 +2167,7 @@ frb_f_get_bits(VALUE self, VALUE rindex_reader)
  *    # is equivalent to
  *    f = RangeFilter.new(:date, :>= => "200501", :<= => 200502)
  */
-static VALUE
-frb_rf_init(VALUE self, VALUE rfield, VALUE roptions)
-{
+static VALUE frb_rf_init(VALUE self, VALUE rfield, VALUE roptions) {
     FrtFilter *f;
     char *lterm = NULL;
     char *uterm = NULL;
@@ -2024,9 +2175,10 @@ frb_rf_init(VALUE self, VALUE rfield, VALUE roptions)
     bool include_upper = false;
     int ex_code = 0;
     const char *msg = NULL;
+    TypedData_Get_Struct(self, FrtFilter, &frb_range_filter_t, f);
     get_range_params(roptions, &lterm, &uterm, &include_lower, &include_upper);
     FRT_TRY
-        f = frt_rfilt_new(frb_field(rfield), lterm, uterm, include_lower, include_upper);
+        f = frt_rfilt_init(f, frb_field(rfield), lterm, uterm, include_lower, include_upper);
         break;
     default:
         ex_code = xcontext.excode;
@@ -2036,7 +2188,6 @@ frb_rf_init(VALUE self, VALUE rfield, VALUE roptions)
 
     if (ex_code && msg) { frb_raise(ex_code, msg); }
 
-    Frt_Wrap_Struct(self, NULL, &frb_f_free, f);
     object_add(f, self);
     return self;
 }
@@ -2047,6 +2198,23 @@ frb_rf_init(VALUE self, VALUE rfield, VALUE roptions)
  *
  ****************************************************************************/
 
+static size_t frb_typed_range_filter_size(const void *p) {
+    return sizeof(FrtRangeFilter);
+    (void)p;
+}
+
+const rb_data_type_t frb_typed_range_filter_t = {
+    .wrap_struct_name = "FrbTypedRangeFilter",
+    .function = {
+        .dfree = frb_f_free,
+        .dsize = frb_typed_range_filter_size
+    }
+};
+
+static VALUE frb_trf_alloc(VALUE rclass) {
+    FrtFilter *f = frt_trfilt_alloc();
+    return TypedData_Wrap_Struct(rclass, &frb_typed_range_filter_t, f);
+}
 
 /*
  *  call-seq:
@@ -2071,19 +2239,15 @@ frb_rf_init(VALUE self, VALUE rfield, VALUE roptions)
  *    # is equivalent to
  *    f = TypedRangeFilter.new(:date, :>= => "-132.2", :<= => -1.4)
  */
-static VALUE
-frb_trf_init(VALUE self, VALUE rfield, VALUE roptions)
-{
+static VALUE frb_trf_init(VALUE self, VALUE rfield, VALUE roptions) {
     FrtFilter *f;
     char *lterm = NULL;
     char *uterm = NULL;
     bool include_lower = false;
     bool include_upper = false;
-
+    TypedData_Get_Struct(self, FrtFilter, &frb_typed_range_filter_t, f);
     get_range_params(roptions, &lterm, &uterm, &include_lower, &include_upper);
-    f = frt_trfilt_new(frb_field(rfield), lterm, uterm,
-                   include_lower, include_upper);
-    Frt_Wrap_Struct(self, NULL, &frb_f_free, f);
+    frt_trfilt_init(f, frb_field(rfield), lterm, uterm, include_lower, include_upper);
     object_add(f, self);
     return self;
 }
@@ -2094,20 +2258,35 @@ frb_trf_init(VALUE self, VALUE rfield, VALUE roptions)
  *
  ****************************************************************************/
 
+static size_t frb_query_filter_size(const void *p) {
+    return sizeof(FrtQueryFilter);
+    (void)p;
+}
+
+const rb_data_type_t frb_query_filter_t = {
+    .wrap_struct_name = "FrbQueryFilter",
+    .function = {
+        .dfree = frb_q_free,
+        .dsize = frb_query_filter_size
+    }
+};
+
+static VALUE frb_qf_alloc(VALUE rclass) {
+    FrtFilter *qf = frt_qfilt_alloc();
+    return TypedData_Wrap_Struct(rclass, &frb_query_filter_t, qf);
+}
+
 /*
  *  call-seq:
  *     QueryFilter.new(query) -> filter
  *
  *  Create a new QueryFilter which applies the query +query+.
  */
-static VALUE
-frb_qf_init(VALUE self, VALUE rquery)
-{
-    FrtQuery *q;
+static VALUE frb_qf_init(VALUE self, VALUE rquery) {
+    FrtQuery *q = DATA_PTR(rquery);
     FrtFilter *f;
-    Data_Get_Struct(rquery, FrtQuery, q);
-    f = frt_qfilt_new(q);
-    Frt_Wrap_Struct(self, NULL, &frb_f_free, f);
+    TypedData_Get_Struct(self, FrtFilter, &frb_query_filter_t, f);
+    frt_qfilt_init(f, q);
     object_add(f, self);
     return self;
 }
@@ -2118,27 +2297,39 @@ frb_qf_init(VALUE self, VALUE rquery)
  *
  ****************************************************************************/
 
-static void
-frb_sf_free(void *p)
-{
+static size_t frb_sort_field_size(const void *p) {
+    return sizeof(FrtSortField);
+    (void)p;
+}
+
+static void frb_sf_free(void *p) {
     object_del(p);
     frt_sort_field_destroy((FrtSortField *)p);
 }
 
-static VALUE
-frb_get_sf(FrtSortField *sf)
-{
+const rb_data_type_t frb_sort_field_t = {
+    .wrap_struct_name = "FrbSortField",
+    .function = {
+        .dfree = frb_sf_free,
+        .dsize = frb_sort_field_size
+    }
+};
+
+static VALUE frb_sf_alloc(VALUE rclass) {
+    FrtSortField *sf = frt_sort_field_alloc();
+    return TypedData_Wrap_Struct(rclass, &frb_sort_field_t, sf);
+}
+
+static VALUE frb_get_sf(FrtSortField *sf) {
     VALUE self = object_get(sf);
     if (self == Qnil) {
-        self = Data_Wrap_Struct(cSortField, NULL, &frb_sf_free, sf);
+        self = TypedData_Wrap_Struct(cSortField, &frb_sort_field_t, sf);
         object_add(sf, self);
     }
     return self;
 }
 
-static int
-get_sort_type(VALUE rtype)
-{
+static int get_sort_type(VALUE rtype) {
     Check_Type(rtype, T_SYMBOL);
     if (rtype == sym_byte) {
         return FRT_SORT_TYPE_BYTE;
@@ -2182,16 +2373,14 @@ get_sort_type(VALUE rtype)
  *  :reverse        Default: false. Set to true if you want to reverse the
  *                  sort.
  */
-static VALUE
-frb_sf_init(int argc, VALUE *argv, VALUE self)
-{
+static VALUE frb_sf_init(int argc, VALUE *argv, VALUE self) {
     FrtSortField *sf;
     VALUE rfield, roptions;
     VALUE rval;
     int type = FRT_SORT_TYPE_AUTO;
     int is_reverse = false;
     FrtSymbol field;
-
+    TypedData_Get_Struct(self, FrtSortField, &frb_sort_field_t, sf);
     if (rb_scan_args(argc, argv, "11", &rfield, &roptions) == 2) {
         if (Qnil != (rval = rb_hash_aref(roptions, sym_type))) {
             type = get_sort_type(rval);
@@ -2206,12 +2395,11 @@ frb_sf_init(int argc, VALUE *argv, VALUE self)
     if (NIL_P(rfield)) rb_raise(rb_eArgError, "must pass a valid field name");
     field = frb_field(rfield);
 
-    sf = frt_sort_field_new(field, type, is_reverse);
+    frt_sort_field_init(sf, field, type, is_reverse);
     if (sf->field == (FrtSymbol)NULL) {
         sf->field = field;
     }
 
-    Frt_Wrap_Struct(self, NULL, &frb_sf_free, sf);
     object_add(sf, self);
     return self;
 }
@@ -2302,17 +2490,18 @@ frb_sf_to_s(VALUE self)
  *
  ****************************************************************************/
 
-static void
-frb_sort_free(void *p)
-{
+static size_t frb_sort_size(const void *p) {
+    return sizeof(FrtSort);
+    (void)p;
+}
+
+static void frb_sort_free(void *p) {
     FrtSort *sort = (FrtSort *)p;
     object_del(sort);
     frt_sort_destroy(sort);
 }
 
-static void
-frb_sort_mark(void *p)
-{
+static void frb_sort_mark(void *p) {
     FrtSort *sort = (FrtSort *)p;
     int i;
     for (i = 0; i < sort->size; i++) {
@@ -2320,20 +2509,25 @@ frb_sort_mark(void *p)
     }
 }
 
-static VALUE
-frb_sort_alloc(VALUE klass)
-{
+const rb_data_type_t frb_sort_t = {
+    .wrap_struct_name = "FrbSort",
+    .function = {
+        .dmark = frb_sort_mark,
+        .dfree = frb_sort_free,
+        .dsize = frb_sort_size
+    }
+};
+
+static VALUE frb_sort_alloc(VALUE klass) {
     VALUE self;
     FrtSort *sort = frt_sort_new();
     sort->destroy_all = false;
-    self = Data_Wrap_Struct(klass, &frb_sort_mark, &frb_sort_free, sort);
+    self = TypedData_Wrap_Struct(klass, &frb_sort_t, sort);
     object_add(sort, self);
     return self;
 }
 
-static void
-frb_parse_sort_str(FrtSort *sort, char *xsort_str)
-{
+static void frb_parse_sort_str(FrtSort *sort, char *xsort_str) {
     FrtSortField *sf;
     char *comma, *end, *e, *s;
     const int len = strlen(xsort_str);
@@ -2373,13 +2567,11 @@ frb_parse_sort_str(FrtSort *sort, char *xsort_str)
     free(sort_str);
 }
 
-static void
-frb_sort_add(FrtSort *sort, VALUE rsf, bool reverse)
-{
+static void frb_sort_add(FrtSort *sort, VALUE rsf, bool reverse) {
     FrtSortField *sf;
     switch (TYPE(rsf)) {
         case T_DATA:
-            Data_Get_Struct(rsf, FrtSortField, sf);
+            TypedData_Get_Struct(rsf, FrtSortField, &frb_sort_field_t, sf);
             if (reverse) sf->reverse = !sf->reverse;
             frt_sort_add_sort_field(sort, sf);
             break;
@@ -2408,9 +2600,7 @@ frb_sort_add(FrtSort *sort, VALUE rsf, bool reverse)
  *  reversed so if any of them are already reversed the  will be turned back
  *  to their natural order again. By default
  */
-static VALUE
-frb_sort_init(int argc, VALUE *argv, VALUE self)
-{
+static VALUE frb_sort_init(int argc, VALUE *argv, VALUE self) {
     int i;
     VALUE rfields, rreverse;
     bool reverse = false;
@@ -2448,9 +2638,7 @@ frb_sort_init(int argc, VALUE *argv, VALUE self)
  *
  *  Returns an array of the SortFields held by the Sort object.
  */
-static VALUE
-frb_sort_get_fields(VALUE self)
-{
+static VALUE frb_sort_get_fields(VALUE self) {
     GET_SORT();
     VALUE rfields = rb_ary_new2(sort->size);
     int i;
@@ -2467,9 +2655,7 @@ frb_sort_get_fields(VALUE self)
  *
  *  Returns a human readable string representing the sort object.
  */
-static VALUE
-frb_sort_to_s(VALUE self)
-{
+static VALUE frb_sort_to_s(VALUE self) {
     GET_SORT();
     char *str = frt_sort_to_s(sort);
     VALUE rstr = rb_str_new2(str);
@@ -2483,9 +2669,7 @@ frb_sort_to_s(VALUE self)
  *
  ****************************************************************************/
 
-static void
-frb_sea_free(void *p)
-{
+static void frb_sea_free(void *p) {
     FrtSearcher *sea = (FrtSearcher *)p;
     object_del(sea);
     sea->close(sea);
@@ -2500,11 +2684,8 @@ frb_sea_free(void *p)
  *  Close the searcher. The garbage collector will do this for you or you can
  *  call this method explicitly.
  */
-static VALUE
-frb_sea_close(VALUE self)
-{
+static VALUE frb_sea_close(VALUE self) {
     GET_SEA();
-    Frt_Unwrap_Struct(self);
     object_del(sea);
     sea->close(sea);
     return Qnil;
@@ -2516,9 +2697,7 @@ frb_sea_close(VALUE self)
  *
  *  Return the IndexReader wrapped by this searcher.
  */
-static VALUE
-frb_sea_get_reader(VALUE self)
-{
+static VALUE frb_sea_get_reader(VALUE self) {
     GET_SEA();
     return object_get(((FrtIndexSearcher *)sea)->ir);
 }
@@ -2530,13 +2709,9 @@ frb_sea_get_reader(VALUE self)
  *  Return the number of documents in which the term +term+ appears in the
  *  field +field+.
  */
-static VALUE
-frb_sea_doc_freq(VALUE self, VALUE rfield, VALUE rterm)
-{
+static VALUE frb_sea_doc_freq(VALUE self, VALUE rfield, VALUE rterm) {
     GET_SEA();
-    return INT2FIX(sea->doc_freq(sea,
-                                 frb_field(rfield),
-                                 StringValuePtr(rterm)));
+    return INT2FIX(sea->doc_freq(sea, frb_field(rfield), StringValuePtr(rterm)));
 }
 
 /*
@@ -2548,9 +2723,7 @@ frb_sea_doc_freq(VALUE self, VALUE rfield, VALUE rterm)
  *  document returned. Documents are referenced internally by document ids
  *  which are returned by the Searchers search methods.
  */
-static VALUE
-frb_sea_doc(VALUE self, VALUE rdoc_id)
-{
+static VALUE frb_sea_doc(VALUE self, VALUE rdoc_id) {
     GET_SEA();
     return frb_get_lazy_doc(sea->get_lazy_doc(sea, FIX2INT(rdoc_id)));
 }
@@ -2564,16 +2737,12 @@ frb_sea_doc(VALUE self, VALUE rdoc_id)
  *  there are no deletions, this number also refers to the number of documents
  *  in the index.
  */
-static VALUE
-frb_sea_max_doc(VALUE self)
-{
+static VALUE frb_sea_max_doc(VALUE self) {
     GET_SEA();
     return INT2FIX(sea->max_doc(sea));
 }
 
-static float
-call_filter_proc(int doc_id, float score, FrtSearcher *self, void *arg)
-{
+static float call_filter_proc(int doc_id, float score, FrtSearcher *self, void *arg) {
     VALUE val = rb_funcall((VALUE)arg, id_call, 3,
                            INT2FIX(doc_id),
                            rb_float_new((double)score),
@@ -2592,44 +2761,34 @@ call_filter_proc(int doc_id, float score, FrtSearcher *self, void *arg)
     }
 }
 
-typedef struct CWrappedFilter
-{
+typedef struct CWrappedFilter {
     FrtFilter super;
     VALUE  rfilter;
 } CWrappedFilter;
 #define CWF(filt) ((CWrappedFilter *)(filt))
 
-static unsigned long long
-cwfilt_hash(FrtFilter *filt)
-{
+static unsigned long long cwfilt_hash(FrtFilter *filt) {
     return (unsigned long long)NUM2ULONG(rb_funcall(CWF(filt)->rfilter, id_hash, 0));
 }
 
-static int
-cwfilt_eq(FrtFilter *filt, FrtFilter *o)
-{
+static int cwfilt_eq(FrtFilter *filt, FrtFilter *o) {
     return RTEST(rb_funcall(CWF(filt)->rfilter, id_eql, 1, CWF(o)->rfilter));
 }
 
-static FrtBitVector *
-cwfilt_get_bv_i(FrtFilter *filt, FrtIndexReader *ir)
-{
+static FrtBitVector *cwfilt_get_bv_i(FrtFilter *filt, FrtIndexReader *ir) {
     VALUE rbv = rb_funcall(CWF(filt)->rfilter, id_bits, 1, object_get(ir));
     FrtBitVector *bv;
-    Data_Get_Struct(rbv, FrtBitVector, bv);
+    bv = DATA_PTR(rbv);
     FRT_REF(bv);
     return bv;
 }
 
-FrtFilter *
-frb_get_cwrapped_filter(VALUE rval)
-{
+FrtFilter *frb_get_cwrapped_filter(VALUE rval) {
     FrtFilter *filter;
     if (frb_is_cclass(rval) && DATA_PTR(rval)) {
-        Data_Get_Struct(rval, FrtFilter, filter);
+        filter = DATA_PTR(rval);
         FRT_REF(filter);
-    }
-    else {
+    } else {
         filter               = filt_new(CWrappedFilter);
         filter->hash         = &cwfilt_hash;
         filter->eq           = &cwfilt_eq;
@@ -2639,9 +2798,7 @@ frb_get_cwrapped_filter(VALUE rval)
     return filter;
 }
 
-static FrtTopDocs *
-frb_sea_search_internal(FrtQuery *query, VALUE roptions, FrtSearcher *sea)
-{
+static FrtTopDocs *frb_sea_search_internal(FrtQuery *query, VALUE roptions, FrtSearcher *sea) {
     VALUE rval;
     int offset = 0, limit = 10;
     FrtFilter *filter = NULL;
@@ -2700,7 +2857,7 @@ frb_sea_search_internal(FrtQuery *query, VALUE roptions, FrtSearcher *sea)
             if (TYPE(rval) != T_DATA || CLASS_OF(rval) == cSortField) {
                 rval = frb_sort_init(1, &rval, frb_sort_alloc(cSort));
             }
-            Data_Get_Struct(rval, FrtSort, sort);
+            TypedData_Get_Struct(rval, FrtSort, &frb_sort_t, sort);
         }
     }
 
@@ -2756,14 +2913,11 @@ frb_sea_search_internal(FrtQuery *query, VALUE roptions, FrtSearcher *sea)
  *                  object. This can be used, for example, to weight the score
  *                  of a matched document by it's age.
  */
-static VALUE
-frb_sea_search(int argc, VALUE *argv, VALUE self)
-{
+static VALUE frb_sea_search(int argc, VALUE *argv, VALUE self) {
     GET_SEA();
     VALUE rquery, roptions;
-    FrtQuery *query;
     rb_scan_args(argc, argv, "11", &rquery, &roptions);
-    Data_Get_Struct(rquery, FrtQuery, query);
+    FrtQuery *query = DATA_PTR(rquery);
     FrtTopDocs *td = frb_sea_search_internal(query, roptions, sea);
     return frb_get_td(td, self);
 }
@@ -2809,27 +2963,23 @@ frb_sea_search(int argc, VALUE *argv, VALUE self)
  *                  Boolean value specifying whether the result should be
  *                  included in the result set.
  */
-static VALUE
-frb_sea_search_each(int argc, VALUE *argv, VALUE self)
-{
+static VALUE frb_sea_search_each(int argc, VALUE *argv, VALUE self) {
     int i;
-    FrtQuery *q;
     float max_score;
     FrtTopDocs *td;
     VALUE rquery, roptions, rtotal_hits;
     GET_SEA();
 
     rb_scan_args(argc, argv, "11", &rquery, &roptions);
+    FrtQuery *q = DATA_PTR(rquery);
 
-    Data_Get_Struct(rquery, FrtQuery, q);
     td = frb_sea_search_internal(q, roptions, sea);
 
     max_score = (td->max_score > 1.0f) ? td->max_score : 1.0f;
 
     /* yield normalized scores */
     for (i = 0; i < td->size; i++) {
-        rb_yield_values(2, INT2FIX(td->hits[i]->doc),
-                        rb_float_new((double)(td->hits[i]->score/max_score)));
+        rb_yield_values(2, INT2FIX(td->hits[i]->doc), rb_float_new((double)(td->hits[i]->score/max_score)));
     }
 
     rtotal_hits = INT2FIX(td->total_hits);
@@ -2877,10 +3027,7 @@ frb_sea_search_each(int argc, VALUE *argv, VALUE self)
  *      # start_doc will be nil now if results is empty, ie no more matches
  *    end while start_doc
  */
-static VALUE
-frb_sea_scan(int argc, VALUE *argv, VALUE self)
-{
-    FrtQuery *q;
+static VALUE frb_sea_scan(int argc, VALUE *argv, VALUE self) {
     int i, count;
     VALUE rval, rquery, roptions;
     int *doc_array;
@@ -2888,7 +3035,7 @@ frb_sea_scan(int argc, VALUE *argv, VALUE self)
     int start_doc = 0, limit = 50;
     GET_SEA();
     rb_scan_args(argc, argv, "11", &rquery, &roptions);
-    Data_Get_Struct(rquery, FrtQuery, q);
+    FrtQuery *q = DATA_PTR(rquery);
 
     if (Qnil != roptions) {
         Check_Type(roptions, T_HASH);
@@ -2938,15 +3085,30 @@ frb_sea_scan(int argc, VALUE *argv, VALUE self)
  *
  *    puts searcher.explain(query, doc_id).to_s
  */
-static VALUE
-frb_sea_explain(VALUE self, VALUE rquery, VALUE rdoc_id)
-{
+
+static size_t frb_explanation_size(const void *p) {
+    return sizeof(FrtExplanation);
+    (void)p;
+}
+
+static void frb_explanation_free(void *p) {
+    frt_expl_destroy((FrtExplanation *)p);
+}
+
+const rb_data_type_t frb_explanation_t = {
+    .wrap_struct_name = "FrbExplanation",
+    .function = {
+        .dfree = frb_explanation_free,
+        .dsize = frb_explanation_size
+    }
+};
+
+static VALUE frb_sea_explain(VALUE self, VALUE rquery, VALUE rdoc_id) {
     GET_SEA();
-    FrtQuery *query;
+    FrtQuery *query = DATA_PTR(rquery);
     FrtExplanation *expl;
-    Data_Get_Struct(rquery, FrtQuery, query);
     expl = sea->explain(sea, query, FIX2INT(rdoc_id));
-    return Data_Wrap_Struct(cExplanation, NULL, &frt_expl_destroy, expl);
+    return TypedData_Wrap_Struct(cExplanation, &frb_explanation_t, expl);
 }
 
 /*
@@ -2976,7 +3138,6 @@ frb_sea_highlight(int argc, VALUE *argv, VALUE self)
 {
     GET_SEA();
     VALUE rquery, rdoc_id, rfield, roptions, v;
-    FrtQuery *query;
     int excerpt_length = 150;
     int num_excerpts = 2;
     const char *pre_tag = "<b>";
@@ -2985,7 +3146,7 @@ frb_sea_highlight(int argc, VALUE *argv, VALUE self)
     char **excerpts;
 
     rb_scan_args(argc, argv, "31", &rquery, &rdoc_id, &rfield, &roptions);
-    Data_Get_Struct(rquery, FrtQuery, query);
+    FrtQuery *query = DATA_PTR(rquery);
     if (argc > 3) {
         if (TYPE(roptions) != T_HASH) {
            rb_raise(rb_eArgError, "The fourth argument to Searcher#highlight must be a hash");
@@ -3041,16 +3202,33 @@ frb_sea_highlight(int argc, VALUE *argv, VALUE self)
  *
  ****************************************************************************/
 
-static void
-frb_sea_mark(void *p)
-{
+static size_t frb_index_searcher_size(const void *p) {
+    return sizeof(FrtIndexSearcher);
+    (void)p;
+}
+
+static void frb_sea_mark(void *p) {
     FrtIndexSearcher *isea = (FrtIndexSearcher *)p;
     frb_gc_mark(isea->ir);
     frb_gc_mark(isea->ir->store);
 }
 
+const rb_data_type_t frb_index_searcher_t = {
+    .wrap_struct_name = "FrbIndexSearcher",
+    .function = {
+        .dmark = frb_sea_mark,
+        .dfree = frb_sea_free,
+        .dsize = frb_index_searcher_size
+    }
+};
+
+static VALUE frb_sea_alloc(VALUE rclass) {
+    FrtSearcher *s = frt_isea_alloc();
+    return TypedData_Wrap_Struct(rclass, &frb_index_searcher_t, s);
+}
+
 #define FRT_GET_IR(rir, ir) do {\
-    rir = Data_Wrap_Struct(cIndexReader, &frb_ir_mark, &frb_ir_free, ir);\
+    rir = TypedData_Wrap_Struct(cIndexReader, &frb_index_reader_t, ir);\
     object_add(ir, rir);\
 } while (0)
 
@@ -3064,33 +3242,31 @@ frb_sea_mark(void *p)
  *  searching multiple indexes. Just open the IndexReader on multiple
  *  directories.
  */
-static VALUE
-frb_sea_init(VALUE self, VALUE obj)
-{
+static VALUE frb_sea_init(VALUE self, VALUE obj) {
     FrtStore *store = NULL;
     FrtIndexReader *ir = NULL;
     FrtSearcher *sea;
+    TypedData_Get_Struct(self, FrtSearcher, &frb_index_searcher_t, sea);
     if (TYPE(obj) == T_STRING) {
         frb_create_dir(obj);
         store = frt_open_fs_store(rs2s(obj));
-        ir = frt_ir_open(store);
+        ir = frt_ir_open(NULL, store);
         FRT_DEREF(store);
         FRT_GET_IR(obj, ir);
     } else {
         Check_Type(obj, T_DATA);
         if (rb_obj_is_kind_of(obj, cDirectory) == Qtrue) {
-            Data_Get_Struct(obj, FrtStore, store);
-            ir = frt_ir_open(store);
+            store = DATA_PTR(obj);
+            ir = frt_ir_open(NULL, store);
             FRT_GET_IR(obj, ir);
         } else if (rb_obj_is_kind_of(obj, cIndexReader) == Qtrue) {
-            Data_Get_Struct(obj, FrtIndexReader, ir);
+            TypedData_Get_Struct(obj, FrtIndexReader, &frb_index_reader_t, ir);
         } else {
             rb_raise(rb_eArgError, "Unknown type for argument to IndexSearcher.new");
         }
     }
-    sea = frt_isea_new(ir);
+    frt_isea_init(sea, ir);
     ((FrtIndexSearcher *)sea)->close_ir = false;
-    Frt_Wrap_Struct(self, &frb_sea_mark, &frb_sea_free, sea);
     object_add(sea, self);
     return self;
 }
@@ -3101,9 +3277,12 @@ frb_sea_init(VALUE self, VALUE obj)
  *
  ****************************************************************************/
 
-static void
-frb_ms_free(void *p)
-{
+static size_t frb_multi_searcher_size(const void *p) {
+    return sizeof(FrtMultiSearcher);
+    (void)p;
+}
+
+static void frb_ms_free(void *p) {
     FrtSearcher *sea = (FrtSearcher *)p;
     FrtMultiSearcher *msea = (FrtMultiSearcher *)sea;
     free(msea->searchers);
@@ -3111,14 +3290,26 @@ frb_ms_free(void *p)
     frt_searcher_close(sea);
 }
 
-static void
-frb_ms_mark(void *p)
-{
+static void frb_ms_mark(void *p) {
     int i;
     FrtMultiSearcher *msea = (FrtMultiSearcher *)p;
     for (i = 0; i < msea->s_cnt; i++) {
         frb_gc_mark(msea->searchers[i]);
     }
+}
+
+const rb_data_type_t frb_multi_searcher_t = {
+    .wrap_struct_name = "FrbMultiSearcher",
+    .function = {
+        .dmark = frb_ms_mark,
+        .dfree = frb_ms_free,
+        .dsize = frb_multi_searcher_size
+    }
+};
+
+static VALUE frb_ms_alloc(VALUE rclass) {
+    FrtSearcher *s = frt_msea_alloc();
+    return TypedData_Wrap_Struct(rclass, &frb_multi_searcher_t, s);
 }
 
 /*
@@ -3128,15 +3319,13 @@ frb_ms_mark(void *p)
  *  Create a new MultiSearcher by passing a list of subsearchers to the
  *  constructor.
  */
-static VALUE
-frb_ms_init(int argc, VALUE *argv, VALUE self)
-{
+static VALUE frb_ms_init(int argc, VALUE *argv, VALUE self) {
     int i, j, top = 0, capa = argc;
 
     VALUE rsearcher;
     FrtSearcher **searchers = FRT_ALLOC_N(FrtSearcher *, capa);
     FrtSearcher *s;
-
+    TypedData_Get_Struct(self, FrtSearcher, &frb_multi_searcher_t, s);
     for (i = 0; i < argc; i++) {
         rsearcher = argv[i];
         switch (TYPE(rsearcher)) {
@@ -3145,23 +3334,92 @@ frb_ms_init(int argc, VALUE *argv, VALUE self)
                 FRT_REALLOC_N(searchers, FrtSearcher *, capa);
                 for (j = 0; j < RARRAY_LEN(rsearcher); j++) {
                     VALUE rs = RARRAY_PTR(rsearcher)[j];
-                    Data_Get_Struct(rs, FrtSearcher, s);
+                    s = DATA_PTR(rs);
                     searchers[top++] = s;
                 }
                 break;
             case T_DATA:
-                Data_Get_Struct(rsearcher, FrtSearcher, s);
+                s = DATA_PTR(rsearcher);
                 searchers[top++] = s;
                 break;
             default:
-                rb_raise(rb_eArgError, "Can't add class %s to MultiSearcher",
-                         rb_obj_classname(rsearcher));
+                rb_raise(rb_eArgError, "Can't add class %s to MultiSearcher", rb_obj_classname(rsearcher));
                 break;
         }
     }
-    s = frt_msea_new(searchers, top, false);
-    Frt_Wrap_Struct(self, &frb_ms_mark, &frb_ms_free, s);
+    frt_msea_init(s, searchers, top, false);
     object_add(s, self);
+    return self;
+}
+
+VALUE frb_get_q(FrtQuery *q) {
+    VALUE self = object_get(q);
+
+    if (self == Qnil) {
+        switch (q->type) {
+            case TERM_QUERY:
+                self = TypedData_Wrap_Struct(cTermQuery, &frb_term_query_t, q);
+                break;
+            case MULTI_TERM_QUERY:
+                self = TypedData_Wrap_Struct(cMultiTermQuery, &frb_multi_term_query_t, q);
+                break;
+            case BOOLEAN_QUERY:
+                self = TypedData_Wrap_Struct(cBooleanQuery, &frb_boolean_query_t, q);
+                break;
+            case PHRASE_QUERY:
+                self = TypedData_Wrap_Struct(cPhraseQuery, &frb_phrase_query_t, q);
+                break;
+            case CONSTANT_QUERY:
+                self = TypedData_Wrap_Struct(cConstantScoreQuery, &frb_constant_score_query_t, q);
+                break;
+            case FILTERED_QUERY:
+                self = TypedData_Wrap_Struct(cFilteredQuery, &frb_filtered_query_t, q);
+                break;
+            case MATCH_ALL_QUERY:
+                self = TypedData_Wrap_Struct(cMatchAllQuery, &frb_match_all_query_t, q);
+                break;
+            case RANGE_QUERY:
+                self = TypedData_Wrap_Struct(cRangeQuery, &frb_range_query_t, q);
+                break;
+            case TYPED_RANGE_QUERY:
+                self = TypedData_Wrap_Struct(cTypedRangeQuery, &frb_typed_range_query_t, q);
+                break;
+            case WILD_CARD_QUERY:
+                self = TypedData_Wrap_Struct(cWildcardQuery, &frb_wilcard_query_t, q);
+                break;
+            case FUZZY_QUERY:
+                self = TypedData_Wrap_Struct(cFuzzyQuery, &frb_fuzzy_query_t, q);
+                break;
+            case PREFIX_QUERY:
+                self = TypedData_Wrap_Struct(cPrefixQuery, &frb_prefix_query_t, q);
+                break;
+            case SPAN_TERM_QUERY:
+                self = TypedData_Wrap_Struct(cSpanMultiTermQuery, &frb_span_multi_term_query_t, q);
+                break;
+            case SPAN_MULTI_TERM_QUERY:
+                self = TypedData_Wrap_Struct(cSpanPrefixQuery, &frb_span_prefix_query_t, q);
+                break;
+            case SPAN_PREFIX_QUERY:
+                self = TypedData_Wrap_Struct(cSpanTermQuery, &frb_span_term_query_t, q);
+                break;
+            case SPAN_FIRST_QUERY:
+                self = TypedData_Wrap_Struct(cSpanFirstQuery, &frb_span_first_query_t, q);
+                break;
+            case SPAN_OR_QUERY:
+                self = TypedData_Wrap_Struct(cSpanOrQuery, &frb_span_or_query_t, q);
+                break;
+            case SPAN_NOT_QUERY:
+                self = TypedData_Wrap_Struct(cSpanNotQuery, &frb_span_not_query_t, q);
+                break;
+            case SPAN_NEAR_QUERY:
+                self = TypedData_Wrap_Struct(cSpanNearQuery, &frb_span_near_query_t, q);
+                break;
+            default:
+                rb_raise(rb_eArgError, "Unknown query type");
+                break;
+        }
+        object_add(q, self);
+    }
     return self;
 }
 
@@ -3186,9 +3444,7 @@ cTopDocs = rb_define_class_under(mSearch, "TopDocs", rb_cObject);
  *  is not normalized so it can be greater than 1.0. To normalize scores to
  *  the range 0.0..1.0 divide the scores by TopDocs#max_score.
  */
-static void
-Init_Hit(void)
-{
+static void Init_Hit(void) {
     const char *hit_class = "Hit";
     /* rdochack
     cHit = rb_define_class_under(mSearch, "Hit", rb_cObject);
@@ -3218,9 +3474,7 @@ Init_Hit(void)
  *      puts "#{hit.doc} scored #{hit.score * 100.0 / top_docs.max_score}"
  *    end
  */
-static void
-Init_TopDocs(void)
-{
+static void Init_TopDocs(void) {
     const char *td_class = "TopDocs";
     /* rdochack
     cTopDocs = rb_define_class_under(mSearch, "TopDocs", rb_cObject);
@@ -3257,9 +3511,7 @@ Init_TopDocs(void)
  *
  *    puts searcher.explain(query, doc_id).to_s
  */
-static void
-Init_Explanation(void)
-{
+static void Init_Explanation(void) {
     cExplanation = rb_define_class_under(mSearch, "Explanation", rb_cObject);
     rb_define_alloc_func(cExplanation, frb_data_alloc);
 
@@ -3304,9 +3556,7 @@ Init_Explanation(void)
  *  for train rails you might also add the tern Ruby but Rails is the more
  *  important term so you'd give it a boost.
  */
-static void
-Init_Query(void)
-{
+static void Init_Query(void) {
     cQuery = rb_define_class_under(mSearch, "Query", rb_cObject);
 
     rb_define_method(cQuery, "to_s", frb_q_to_s, -1);
@@ -3338,12 +3588,9 @@ Init_Query(void)
  *  downcase all text added to the index. The title in this case was not
  *  tokenized so the case would have been left as is.
  */
-static void
-Init_TermQuery(void)
-{
+static void Init_TermQuery(void) {
     cTermQuery = rb_define_class_under(mSearch, "TermQuery", cQuery);
-    rb_define_alloc_func(cTermQuery, frb_data_alloc);
-
+    rb_define_alloc_func(cTermQuery, frb_tq_alloc);
     rb_define_method(cTermQuery, "initialize", frb_tq_init, 2);
 }
 
@@ -3368,20 +3615,16 @@ Init_TermQuery(void)
  *
  *    multi_term_query << "Ruby" << "Ferret" << "Rails" << "Search"
  */
-static void
-Init_MultiTermQuery(void)
-{
+static void Init_MultiTermQuery(void) {
     id_default_max_terms = rb_intern("@@default_max_terms");
     sym_max_terms = ID2SYM(rb_intern("max_terms"));
     sym_min_score = ID2SYM(rb_intern("min_score"));
 
     cMultiTermQuery = rb_define_class_under(mSearch, "MultiTermQuery", cQuery);
-    rb_define_alloc_func(cMultiTermQuery, frb_data_alloc);
+    rb_define_alloc_func(cMultiTermQuery, frb_mtq_alloc);
     rb_cvar_set(cMultiTermQuery, id_default_max_terms, INT2FIX(512));
-    rb_define_singleton_method(cMultiTermQuery, "default_max_terms",
-                               frb_mtq_get_dmt, 0);
-    rb_define_singleton_method(cMultiTermQuery, "default_max_terms=",
-                               frb_mtq_set_dmt, 1);
+    rb_define_singleton_method(cMultiTermQuery, "default_max_terms", frb_mtq_get_dmt, 0);
+    rb_define_singleton_method(cMultiTermQuery, "default_max_terms=", frb_mtq_set_dmt, 1);
 
     rb_define_method(cMultiTermQuery, "initialize", frb_mtq_init, -1);
     rb_define_method(cMultiTermQuery, "add_term", frb_mtq_add_term, -1);
@@ -3415,11 +3658,9 @@ static void Init_BooleanClause(void);
  *    query = BooleanQuery.new
  *    query.add_query(tq1, :must).add_query(bq2, :must).add_query(rq3, :must)
  */
-static void
-Init_BooleanQuery(void)
-{
+static void Init_BooleanQuery(void) {
     cBooleanQuery = rb_define_class_under(mSearch, "BooleanQuery", cQuery);
-    rb_define_alloc_func(cBooleanQuery, frb_data_alloc);
+    rb_define_alloc_func(cBooleanQuery, frb_bq_alloc);
 
     rb_define_method(cBooleanQuery, "initialize", frb_bq_init, -1);
     rb_define_method(cBooleanQuery, "add_query", frb_bq_add_query, -1);
@@ -3447,16 +3688,13 @@ Init_BooleanQuery(void)
  *    query = BooleanQuery.new
  *    query << clause1 << clause2
  */
-static void
-Init_BooleanClause(void)
-{
+static void Init_BooleanClause(void) {
     sym_should = ID2SYM(rb_intern("should"));
     sym_must = ID2SYM(rb_intern("must"));
     sym_must_not = ID2SYM(rb_intern("must_not"));
 
-    cBooleanClause = rb_define_class_under(cBooleanQuery, "BooleanClause",
-                                           rb_cObject);
-    rb_define_alloc_func(cBooleanClause, frb_data_alloc);
+    cBooleanClause = rb_define_class_under(cBooleanQuery, "BooleanClause", rb_cObject);
+    rb_define_alloc_func(cBooleanClause, frb_bc_alloc);
 
     rb_define_method(cBooleanClause, "initialize", frb_bc_init, -1);
     rb_define_method(cBooleanClause, "query", frb_bc_get_query, 0);
@@ -3503,9 +3741,7 @@ Init_BooleanClause(void)
  *    [1010, 0001, 0910, 1100, 1534]
  *
  */
-static void
-Init_RangeQuery(void)
-{
+static void Init_RangeQuery(void) {
     sym_upper = ID2SYM(rb_intern("upper"));
     sym_lower = ID2SYM(rb_intern("lower"));
     sym_upper_exclusive = ID2SYM(rb_intern("upper_exclusive"));
@@ -3519,7 +3755,7 @@ Init_RangeQuery(void)
     sym_greater_than_or_equal_to = ID2SYM(rb_intern(">="));
 
     cRangeQuery = rb_define_class_under(mSearch, "RangeQuery", cQuery);
-    rb_define_alloc_func(cRangeQuery, frb_data_alloc);
+    rb_define_alloc_func(cRangeQuery, frb_rq_alloc);
 
     rb_define_method(cRangeQuery, "initialize", frb_rq_init, 2);
 }
@@ -3549,12 +3785,9 @@ Init_RangeQuery(void)
  *  usually better to use a standard RangeQuery. This will require a little
  *  work on your behalf. See RangeQuery for notes on how to do this.
  */
-static void
-Init_TypedRangeQuery(void)
-{
-    cTypedRangeQuery =
-        rb_define_class_under(mSearch, "TypedRangeQuery", cQuery);
-    rb_define_alloc_func(cTypedRangeQuery, frb_data_alloc);
+static void Init_TypedRangeQuery(void) {
+    cTypedRangeQuery = rb_define_class_under(mSearch, "TypedRangeQuery", cQuery);
+    rb_define_alloc_func(cTypedRangeQuery, frb_trq_alloc);
 
     rb_define_method(cTypedRangeQuery, "initialize", frb_trq_init, 2);
 }
@@ -3622,11 +3855,9 @@ Init_TypedRangeQuery(void)
  *  italic text for example. If you want more information about this, ask on
  *  the mailing list.
  */
-static void
-Init_PhraseQuery(void)
-{
+static void Init_PhraseQuery(void) {
     cPhraseQuery = rb_define_class_under(mSearch, "PhraseQuery", cQuery);
-    rb_define_alloc_func(cPhraseQuery, frb_data_alloc);
+    rb_define_alloc_func(cPhraseQuery, frb_phq_alloc);
 
     rb_define_method(cPhraseQuery, "initialize", frb_phq_init, -1);
     rb_define_method(cPhraseQuery, "add_term", frb_phq_add, -1);
@@ -3664,11 +3895,9 @@ Init_PhraseQuery(void)
  *    # matches => "cat2/sub_cat1"
  *    # matches => "cat2/sub_cat2"
  */
-static void
-Init_PrefixQuery(void)
-{
+static void Init_PrefixQuery(void) {
     cPrefixQuery = rb_define_class_under(mSearch, "PrefixQuery", cQuery);
-    rb_define_alloc_func(cPrefixQuery, frb_data_alloc);
+    rb_define_alloc_func(cPrefixQuery, frb_prq_alloc);
 
     rb_define_method(cPrefixQuery, "initialize", frb_prq_init, -1);
 }
@@ -3699,11 +3928,9 @@ Init_PrefixQuery(void)
  *    # matches => "falling"
  *    # matches => "folly"
  */
-static void
-Init_WildcardQuery(void)
-{
+static void Init_WildcardQuery(void) {
     cWildcardQuery = rb_define_class_under(mSearch, "WildcardQuery", cQuery);
-    rb_define_alloc_func(cWildcardQuery, frb_data_alloc);
+    rb_define_alloc_func(cWildcardQuery, frb_wcq_alloc);
 
     rb_define_method(cWildcardQuery, "initialize", frb_wcq_init, -1);
 }
@@ -3729,9 +3956,7 @@ Init_WildcardQuery(void)
  *                   :prefix_length => 2)
  *    # matches => "gogle", "goggle", "googol", "googel"
  */
-static void
-Init_FuzzyQuery(void)
-{
+static void Init_FuzzyQuery(void) {
     id_default_min_similarity = rb_intern("@@default_min_similarity");
     id_default_prefix_length = rb_intern("@@default_prefix_length");
 
@@ -3739,20 +3964,14 @@ Init_FuzzyQuery(void)
     sym_prefix_length = ID2SYM(rb_intern("prefix_length"));
 
     cFuzzyQuery = rb_define_class_under(mSearch, "FuzzyQuery", cQuery);
-    rb_define_alloc_func(cFuzzyQuery, frb_data_alloc);
-    rb_cvar_set(cFuzzyQuery, id_default_min_similarity,
-                rb_float_new(0.5));
-    rb_cvar_set(cFuzzyQuery, id_default_prefix_length,
-                INT2FIX(0));
+    rb_define_alloc_func(cFuzzyQuery, frb_fq_alloc);
+    rb_cvar_set(cFuzzyQuery, id_default_min_similarity, rb_float_new(0.5));
+    rb_cvar_set(cFuzzyQuery, id_default_prefix_length, INT2FIX(0));
 
-    rb_define_singleton_method(cFuzzyQuery, "default_min_similarity",
-                               frb_fq_get_dms, 0);
-    rb_define_singleton_method(cFuzzyQuery, "default_min_similarity=",
-                               frb_fq_set_dms, 1);
-    rb_define_singleton_method(cFuzzyQuery, "default_prefix_length",
-                               frb_fq_get_dpl, 0);
-    rb_define_singleton_method(cFuzzyQuery, "default_prefix_length=",
-                               frb_fq_set_dpl, 1);
+    rb_define_singleton_method(cFuzzyQuery, "default_min_similarity", frb_fq_get_dms, 0);
+    rb_define_singleton_method(cFuzzyQuery, "default_min_similarity=", frb_fq_set_dms, 1);
+    rb_define_singleton_method(cFuzzyQuery, "default_prefix_length", frb_fq_get_dpl, 0);
+    rb_define_singleton_method(cFuzzyQuery, "default_prefix_length=", frb_fq_set_dpl, 1);
 
     rb_define_method(cFuzzyQuery, "initialize",     frb_fq_init, -1);
     rb_define_method(cFuzzyQuery, "prefix_length",  frb_fq_pre_len, 0);
@@ -3768,9 +3987,7 @@ Init_FuzzyQuery(void)
  *  query in combination with a filter, however, ConstantScoreQuery is
  *  probably better in that circumstance.
  */
-static void
-Init_MatchAllQuery(void)
-{
+static void Init_MatchAllQuery(void) {
     cMatchAllQuery = rb_define_class_under(mSearch, "MatchAllQuery", cQuery);
     rb_define_alloc_func(cMatchAllQuery, frb_maq_alloc);
 
@@ -3797,12 +4014,9 @@ Init_MatchAllQuery(void)
  *  Once this is run once the results are cached and will be returned very
  *  quickly in future requests.
  */
-static void
-Init_ConstantScoreQuery(void)
-{
-    cConstantScoreQuery = rb_define_class_under(mSearch,
-                                                "ConstantScoreQuery", cQuery);
-    rb_define_alloc_func(cConstantScoreQuery, frb_data_alloc);
+static void Init_ConstantScoreQuery(void) {
+    cConstantScoreQuery = rb_define_class_under(mSearch, "ConstantScoreQuery", cQuery);
+    rb_define_alloc_func(cConstantScoreQuery, frb_csq_alloc);
 
     rb_define_method(cConstantScoreQuery, "initialize", frb_csq_init, 1);
 }
@@ -3818,11 +4032,9 @@ Init_ConstantScoreQuery(void)
  *  directly to a Searcher#search method unless you are applying more than one
  *  filter since the search method also takes a filter as a parameter.
  */
-static void
-Init_FilteredQuery(void)
-{
+static void Init_FilteredQuery(void) {
     cFilteredQuery = rb_define_class_under(mSearch, "FilteredQuery", cQuery);
-    rb_define_alloc_func(cFilteredQuery, frb_data_alloc);
+    rb_define_alloc_func(cFilteredQuery, frb_fqq_alloc);
 
     rb_define_method(cFilteredQuery, "initialize", frb_fqq_init, 2);
 }
@@ -3836,11 +4048,9 @@ Init_FilteredQuery(void)
  *  being that it returns the start and end offset of all of its matches for
  *  use by enclosing SpanQueries.
  */
-static void
-Init_SpanTermQuery(void)
-{
+static void Init_SpanTermQuery(void) {
     cSpanTermQuery = rb_define_class_under(mSpans, "SpanTermQuery", cQuery);
-    rb_define_alloc_func(cSpanTermQuery, frb_data_alloc);
+    rb_define_alloc_func(cSpanTermQuery, frb_spantq_alloc);
 
     rb_define_method(cSpanTermQuery, "initialize", frb_spantq_init, 2);
 }
@@ -3854,11 +4064,9 @@ Init_SpanTermQuery(void)
  *  difference being that it returns the start and end offset of all of its
  *  matches for use by enclosing SpanQueries.
  */
-static void
-Init_SpanMultiTermQuery(void)
-{
+static void Init_SpanMultiTermQuery(void) {
     cSpanMultiTermQuery = rb_define_class_under(mSpans, "SpanMultiTermQuery", cQuery);
-    rb_define_alloc_func(cSpanMultiTermQuery, frb_data_alloc);
+    rb_define_alloc_func(cSpanMultiTermQuery, frb_spanmtq_alloc);
 
     rb_define_method(cSpanMultiTermQuery, "initialize", frb_spanmtq_init, 2);
 }
@@ -3872,11 +4080,9 @@ Init_SpanMultiTermQuery(void)
  *  being that it returns the start and end offset of all of its matches for
  *  use by enclosing SpanQueries.
  */
-static void
-Init_SpanPrefixQuery(void)
-{
+static void Init_SpanPrefixQuery(void) {
     cSpanPrefixQuery = rb_define_class_under(mSpans, "SpanPrefixQuery", cQuery);
-    rb_define_alloc_func(cSpanPrefixQuery, frb_data_alloc);
+    rb_define_alloc_func(cSpanPrefixQuery, frb_spanprq_alloc);
 
     rb_define_method(cSpanPrefixQuery, "initialize", frb_spanprq_init, -1);
 }
@@ -3901,11 +4107,9 @@ Init_SpanPrefixQuery(void)
  *
  *  SpanFirstQuery only works with other SpanQueries.
  */
-static void
-Init_SpanFirstQuery(void)
-{
+static void Init_SpanFirstQuery(void) {
     cSpanFirstQuery = rb_define_class_under(mSpans, "SpanFirstQuery", cQuery);
-    rb_define_alloc_func(cSpanFirstQuery, frb_data_alloc);
+    rb_define_alloc_func(cSpanFirstQuery, frb_spanfq_alloc);
 
     rb_define_method(cSpanFirstQuery, "initialize", frb_spanfq_init, 2);
 }
@@ -3948,15 +4152,13 @@ Init_SpanFirstQuery(void)
  *
  *  SpanNearQuery only works with other SpanQueries.
  */
-static void
-Init_SpanNearQuery(void)
-{
+static void Init_SpanNearQuery(void) {
     sym_slop = ID2SYM(rb_intern("slop"));
     sym_in_order = ID2SYM(rb_intern("in_order"));
     sym_clauses = ID2SYM(rb_intern("clauses"));
 
     cSpanNearQuery = rb_define_class_under(mSpans, "SpanNearQuery", cQuery);
-    rb_define_alloc_func(cSpanNearQuery, frb_data_alloc);
+    rb_define_alloc_func(cSpanNearQuery, frb_spannq_alloc);
 
     rb_define_method(cSpanNearQuery, "initialize", frb_spannq_init, -1);
     rb_define_method(cSpanNearQuery, "add", frb_spannq_add, 1);
@@ -4002,11 +4204,9 @@ Init_SpanNearQuery(void)
  *
  *  SpanOrQuery only works with other SpanQueries.
  */
-static void
-Init_SpanOrQuery(void)
-{
+static void Init_SpanOrQuery(void) {
     cSpanOrQuery = rb_define_class_under(mSpans, "SpanOrQuery", cQuery);
-    rb_define_alloc_func(cSpanOrQuery, frb_data_alloc);
+    rb_define_alloc_func(cSpanOrQuery, frb_spanoq_alloc);
 
     rb_define_method(cSpanOrQuery, "initialize", frb_spanoq_init, -1);
     rb_define_method(cSpanOrQuery, "add", frb_spanoq_add, 1);
@@ -4036,11 +4236,9 @@ Init_SpanOrQuery(void)
  *
  *  SpanOrQuery only works with other SpanQueries.
  */
-static void
-Init_SpanNotQuery(void)
-{
+static void Init_SpanNotQuery(void) {
     cSpanNotQuery = rb_define_class_under(mSpans, "SpanNotQuery", cQuery);
-    rb_define_alloc_func(cSpanNotQuery, frb_data_alloc);
+    rb_define_alloc_func(cSpanNotQuery, frb_spanxq_alloc);
 
     rb_define_method(cSpanNotQuery, "initialize", frb_spanxq_init, 2);
 }
@@ -4061,9 +4259,7 @@ extern VALUE mSearch = rb_define_module_under(mFerret, "Search");
  *  field. They are often used in combination to perform special types of
  *  PhraseQuery.
  */
-static void
-Init_Spans(void)
-{
+static void Init_Spans(void) {
     mSpans = rb_define_module_under(mSearch, "Spans");
     Init_SpanTermQuery();
     Init_SpanMultiTermQuery();
@@ -4093,12 +4289,10 @@ Init_Spans(void)
  *  See RangeQuery for notes on how to use the RangeFilter on a field
  *  containing numbers.
  */
-static void
-Init_RangeFilter(void)
-{
+static void Init_RangeFilter(void) {
     cRangeFilter = rb_define_class_under(mSearch, "RangeFilter", cFilter);
     frb_mark_cclass(cRangeFilter);
-    rb_define_alloc_func(cRangeFilter, frb_data_alloc);
+    rb_define_alloc_func(cRangeFilter, frb_rf_alloc);
 
     rb_define_method(cRangeFilter, "initialize", frb_rf_init, 2);
 }
@@ -4120,13 +4314,10 @@ Init_RangeFilter(void)
  *
  *    filter = TypedRangeFilter.new(:created_on, :<= => "50.00")
  */
-static void
-Init_TypedRangeFilter(void)
-{
-    cTypedRangeFilter =
-        rb_define_class_under(mSearch, "TypedRangeFilter", cFilter);
+static void Init_TypedRangeFilter(void) {
+    cTypedRangeFilter = rb_define_class_under(mSearch, "TypedRangeFilter", cFilter);
     frb_mark_cclass(cTypedRangeFilter);
-    rb_define_alloc_func(cTypedRangeFilter, frb_data_alloc);
+    rb_define_alloc_func(cTypedRangeFilter, frb_trf_alloc);
 
     rb_define_method(cTypedRangeFilter, "initialize", frb_trf_init, 2);
 }
@@ -4156,12 +4347,10 @@ Init_TypedRangeFilter(void)
  *  caching. Don't create a new one for each request. Of course, this won't
  *  work in a CGI application.
  */
-static void
-Init_QueryFilter(void)
-{
+static void Init_QueryFilter(void) {
     cQueryFilter = rb_define_class_under(mSearch, "QueryFilter", cFilter);
     frb_mark_cclass(cQueryFilter);
-    rb_define_alloc_func(cQueryFilter, frb_data_alloc);
+    rb_define_alloc_func(cQueryFilter, frb_qf_alloc);
 
     rb_define_method(cQueryFilter, "initialize", frb_qf_init, 1);
 }
@@ -4181,9 +4370,7 @@ Init_QueryFilter(void)
  *  TODO add support for user implemented Filter.
  *  TODO add example of user implemented Filter.
  */
-static void
-Init_Filter(void)
-{
+static void Init_Filter(void) {
     id_bits = rb_intern("bits");
     cFilter = rb_define_class_under(mSearch, "Filter", rb_cObject);
     frb_mark_cclass(cFilter);
@@ -4230,12 +4417,19 @@ Init_Filter(void)
  *  Note 2: When sorting by integer, integers are only 4 bytes so anything
  *  larger will cause strange sorting behaviour.
  */
-static void
-Init_SortField(void)
-{
+
+const rb_data_type_t frb_sort_field_const_t = {
+    .wrap_struct_name = "FrbSortFieldConst",
+    .function = {
+        .dfree = frb_deref_free,
+        .dsize = frb_sort_field_size
+    }
+};
+
+static void Init_SortField(void) {
     /* option hash keys for SortField#initialize */
-    sym_type  = ID2SYM(rb_intern("type"));
-    sym_reverse    = ID2SYM(rb_intern("reverse"));
+    sym_type = ID2SYM(rb_intern("type"));
+    sym_reverse = ID2SYM(rb_intern("reverse"));
     sym_comparator = ID2SYM(rb_intern("comparator"));
 
     /* Sort types */
@@ -4248,7 +4442,7 @@ Init_SortField(void)
     sym_byte = ID2SYM(rb_intern("byte"));
 
     cSortField = rb_define_class_under(mSearch, "SortField", rb_cObject);
-    rb_define_alloc_func(cSortField, frb_data_alloc);
+    rb_define_alloc_func(cSortField, frb_sf_alloc);
 
     rb_define_method(cSortField, "initialize", frb_sf_init, -1);
     rb_define_method(cSortField, "reverse?", frb_sf_is_reverse, 0);
@@ -4258,30 +4452,26 @@ Init_SortField(void)
     rb_define_method(cSortField, "to_s", frb_sf_to_s, 0);
 
     rb_define_const(cSortField, "SCORE",
-                    Data_Wrap_Struct(cSortField, NULL,
-                                     &frb_deref_free,
+                    TypedData_Wrap_Struct(cSortField, &frb_sort_field_const_t,
                                      (FrtSortField *)&FRT_SORT_FIELD_SCORE));
     object_add((FrtSortField *)&FRT_SORT_FIELD_SCORE,
                rb_const_get(cSortField, rb_intern("SCORE")));
 
     rb_define_const(cSortField, "SCORE_REV",
-                    Data_Wrap_Struct(cSortField, NULL,
-                                     &frb_deref_free,
+                    TypedData_Wrap_Struct(cSortField, &frb_sort_field_const_t,
                                      (FrtSortField *)&FRT_SORT_FIELD_SCORE_REV));
     object_add((FrtSortField *)&FRT_SORT_FIELD_SCORE_REV,
                rb_const_get(cSortField, rb_intern("SCORE_REV")));
 
     rb_define_const(cSortField, "DOC_ID",
-                    Data_Wrap_Struct(cSortField, NULL,
-                                     &frb_deref_free,
+                    TypedData_Wrap_Struct(cSortField, &frb_sort_field_const_t,
                                      (FrtSortField *)&FRT_SORT_FIELD_DOC));
 
     oSORT_FIELD_DOC = rb_const_get(cSortField, rb_intern("DOC_ID"));
     object_add((FrtSortField *)&FRT_SORT_FIELD_DOC, oSORT_FIELD_DOC);
 
     rb_define_const(cSortField, "DOC_ID_REV",
-                    Data_Wrap_Struct(cSortField, NULL,
-                                     &frb_deref_free,
+                    TypedData_Wrap_Struct(cSortField, &frb_sort_field_const_t,
                                      (FrtSortField *)&FRT_SORT_FIELD_DOC_REV));
     object_add((FrtSortField *)&FRT_SORT_FIELD_DOC_REV,
                rb_const_get(cSortField, rb_intern("DOC_ID_REV")));
@@ -4307,9 +4497,7 @@ Init_SortField(void)
  *  Remember that the :type parameter for SortField is set to :auto be default
  *  be I strongly recommend you specify a :type value.
  */
-static void
-Init_Sort(void)
-{
+static void Init_Sort(void) {
     /* Sort */
     cSort = rb_define_class_under(mSearch, "Sort", rb_cObject);
     rb_define_alloc_func(cSort, frb_sort_alloc);
@@ -4318,10 +4506,8 @@ Init_Sort(void)
     rb_define_method(cSort, "fields", frb_sort_get_fields, 0);
     rb_define_method(cSort, "to_s", frb_sort_to_s, 0);
 
-    rb_define_const(cSort, "RELEVANCE",
-                    frb_sort_init(0, NULL, frb_sort_alloc(cSort)));
-    rb_define_const(cSort, "INDEX_ORDER",
-                    frb_sort_init(1, &oSORT_FIELD_DOC, frb_sort_alloc(cSort)));
+    rb_define_const(cSort, "RELEVANCE", frb_sort_init(0, NULL, frb_sort_alloc(cSort)));
+    rb_define_const(cSort, "INDEX_ORDER", frb_sort_init(1, &oSORT_FIELD_DOC, frb_sort_alloc(cSort)));
 }
 
 /*
@@ -4354,9 +4540,7 @@ Init_Sort(void)
  *        puts "#{searcher[doc_id][title] scored #{score}"
  *    end
  */
-static void
-Init_Searcher(void)
-{
+static void Init_Searcher(void) {
     /* option hash keys for Searcher#search */
     sym_offset          = ID2SYM(rb_intern("offset"));
     sym_limit           = ID2SYM(rb_intern("limit"));
@@ -4375,7 +4559,7 @@ Init_Searcher(void)
 
     /* Searcher */
     cSearcher = rb_define_class_under(mSearch, "Searcher", rb_cObject);
-    rb_define_alloc_func(cSearcher, frb_data_alloc);
+    rb_define_alloc_func(cSearcher, frb_sea_alloc);
 
     rb_define_method(cSearcher, "initialize", frb_sea_init, 1);
     rb_define_method(cSearcher, "close", frb_sea_close, 0);
@@ -4403,11 +4587,9 @@ Init_Searcher(void)
  *  RemoteSearcher, the MultiSearcher can be used to search multiple machines
  *  at once.
  */
-static void
-Init_MultiSearcher(void)
-{
+static void Init_MultiSearcher(void) {
     cMultiSearcher = rb_define_class_under(mSearch, "MultiSearcher", cSearcher);
-    rb_define_alloc_func(cMultiSearcher, frb_data_alloc);
+    rb_define_alloc_func(cMultiSearcher, frb_ms_alloc);
     rb_define_method(cMultiSearcher, "initialize", frb_ms_init, -1);
 }
 

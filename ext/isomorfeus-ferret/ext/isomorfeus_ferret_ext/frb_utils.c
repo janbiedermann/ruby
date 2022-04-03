@@ -1,37 +1,44 @@
 #include "frt_bitvector.h"
 #include "frt_multimapper.h"
 #include "isomorfeus_ferret.h"
-#include <ruby/st.h>
+#include <ruby.h>
 
 /*****************
  *** BitVector ***
  *****************/
 static VALUE cBitVector;
 
-static void
-frb_bv_free(void *p)
-{
+static void frb_bv_free(void *p) {
     object_del(p);
     frt_bv_destroy((FrtBitVector *)p);
 }
 
-static VALUE
-frb_bv_alloc(VALUE klass)
-{
+const size_t frb_bv_size(const void *p) {
+    return sizeof(FrtBitVector);
+    (void)p;
+}
+
+const rb_data_type_t frb_bv_t = {
+    .wrap_struct_name = "FrbBitVector",
+    .function = {
+        .dfree = frb_bv_free,
+        .dsize = frb_bv_size
+    }
+};
+
+static VALUE frb_bv_alloc(VALUE klass) {
     FrtBitVector *bv = frt_bv_new();
-    VALUE rbv = Data_Wrap_Struct(klass, NULL, &frb_bv_free, bv);
+    VALUE rbv = TypedData_Wrap_Struct(klass, &frb_bv_t, bv);
     object_add(bv, rbv);
     return rbv;
 }
 
-#define GET_BV(bv, self) Data_Get_Struct(self, FrtBitVector, bv)
+#define GET_BV(bv, self) TypedData_Get_Struct(self, FrtBitVector, &frb_bv_t, bv)
 
-VALUE
-frb_get_bv(FrtBitVector *bv)
-{
+VALUE frb_get_bv(FrtBitVector *bv) {
     VALUE rbv;
     if ((rbv = object_get(bv)) == Qnil) {
-        rbv = Data_Wrap_Struct(cBitVector, NULL, &frb_bv_free, bv);
+        rbv = TypedData_Wrap_Struct(cBitVector, &frb_bv_t, bv);
         FRT_REF(bv);
         object_add(bv, rbv);
     }
@@ -44,9 +51,7 @@ frb_get_bv(FrtBitVector *bv)
  *
  *  Returns a new empty bit vector object
  */
-static VALUE
-frb_bv_init(VALUE self)
-{
+static VALUE frb_bv_init(VALUE self) {
     return self;
 }
 
@@ -57,9 +62,7 @@ frb_bv_init(VALUE self)
  *  Set the bit and _i_ to *val* (+true+ or
  *  +false+).
  */
-VALUE
-frb_bv_set(VALUE self, VALUE rindex, VALUE rstate)
-{
+VALUE frb_bv_set(VALUE self, VALUE rindex, VALUE rstate) {
     FrtBitVector *bv;
     int index = FIX2INT(rindex);
     GET_BV(bv, self);
@@ -82,9 +85,7 @@ frb_bv_set(VALUE self, VALUE rindex, VALUE rstate)
  *
  *  Set the bit at _i_ to *on* (+true+)
  */
-VALUE
-frb_bv_set_on(VALUE self, VALUE rindex)
-{
+VALUE frb_bv_set_on(VALUE self, VALUE rindex) {
     frb_bv_set(self, rindex, Qtrue);
     return self;
 }
@@ -95,9 +96,7 @@ frb_bv_set_on(VALUE self, VALUE rindex)
  *
  *  Set the bit at _i_ to *off* (+false+)
  */
-VALUE
-frb_bv_set_off(VALUE self, VALUE rindex)
-{
+VALUE frb_bv_set_off(VALUE self, VALUE rindex) {
     frb_bv_set(self, rindex, Qfalse);
     return self;
 }
@@ -109,9 +108,7 @@ frb_bv_set_off(VALUE self, VALUE rindex)
  *
  *  Get the bit value at _i_
  */
-VALUE
-frb_bv_get(VALUE self, VALUE rindex)
-{
+VALUE frb_bv_get(VALUE self, VALUE rindex) {
     FrtBitVector *bv;
     int index = FIX2INT(rindex);
     GET_BV(bv, self);
@@ -130,9 +127,7 @@ frb_bv_get(VALUE self, VALUE rindex)
  *  negated using +#not+ then count the number of unset bits
  *  instead.
  */
-VALUE
-frb_bv_count(VALUE self)
-{
+VALUE frb_bv_count(VALUE self) {
     FrtBitVector *bv;
     GET_BV(bv, self);
     return INT2FIX(bv->count);
@@ -145,9 +140,7 @@ frb_bv_count(VALUE self)
  *  Clears all set bits in the bit vector. Negated bit vectors will still have
  *  all bits set to *off*.
  */
-VALUE
-frb_bv_clear(VALUE self)
-{
+VALUE frb_bv_clear(VALUE self) {
     FrtBitVector *bv;
     GET_BV(bv, self);
     frt_bv_clear(bv);
@@ -164,9 +157,7 @@ frb_bv_clear(VALUE self)
  *  Compares two bit vectors and returns true if both bit vectors have the same
  *  bits set.
  */
-VALUE
-frb_bv_eql(VALUE self, VALUE other)
-{
+VALUE frb_bv_eql(VALUE self, VALUE other) {
     FrtBitVector *bv1, *bv2;
     GET_BV(bv1, self);
     GET_BV(bv2, other);
@@ -180,9 +171,7 @@ frb_bv_eql(VALUE self, VALUE other)
  *  Used to store bit vectors in Hashes. Especially useful if you want to
  *  cache them.
  */
-VALUE
-frb_bv_hash(VALUE self)
-{
+VALUE frb_bv_hash(VALUE self) {
     FrtBitVector *bv;
     GET_BV(bv, self);
     return ULONG2NUM(frt_bv_hash(bv));
@@ -196,13 +185,11 @@ frb_bv_hash(VALUE self)
  *  Perform a boolean _and_ operation on +bv1+ and
  *  +bv2+
  */
-VALUE
-frb_bv_and(VALUE self, VALUE other)
-{
+VALUE frb_bv_and(VALUE self, VALUE other) {
     FrtBitVector *bv1, *bv2;
     GET_BV(bv1, self);
     GET_BV(bv2, other);
-    return Data_Wrap_Struct(cBitVector, NULL, &frt_bv_destroy, frt_bv_and(bv1, bv2));
+    return TypedData_Wrap_Struct(cBitVector, &frb_bv_t, frt_bv_and(bv1, bv2));
 }
 
 /*
@@ -212,9 +199,7 @@ frb_bv_and(VALUE self, VALUE other)
  *  Perform a boolean _and_ operation on +bv1+ and
  *  +bv2+ in place on +bv1+
  */
-VALUE
-frb_bv_and_x(VALUE self, VALUE other)
-{
+VALUE frb_bv_and_x(VALUE self, VALUE other) {
     FrtBitVector *bv1, *bv2;
     GET_BV(bv1, self);
     GET_BV(bv2, other);
@@ -230,13 +215,11 @@ frb_bv_and_x(VALUE self, VALUE other)
  *  Perform a boolean _or_ operation on +bv1+ and
  *  +bv2+
  */
-VALUE
-frb_bv_or(VALUE self, VALUE other)
-{
+VALUE frb_bv_or(VALUE self, VALUE other) {
     FrtBitVector *bv1, *bv2;
     GET_BV(bv1, self);
     GET_BV(bv2, other);
-    return Data_Wrap_Struct(cBitVector, NULL, &frt_bv_destroy, frt_bv_or(bv1, bv2));
+    return TypedData_Wrap_Struct(cBitVector, &frb_bv_t, frt_bv_or(bv1, bv2));
 }
 
 /*
@@ -246,9 +229,7 @@ frb_bv_or(VALUE self, VALUE other)
  *  Perform a boolean _or_ operation on +bv1+ and
  *  +bv2+ in place on +bv1+
  */
-VALUE
-frb_bv_or_x(VALUE self, VALUE other)
-{
+VALUE frb_bv_or_x(VALUE self, VALUE other) {
     FrtBitVector *bv1, *bv2;
     GET_BV(bv1, self);
     GET_BV(bv2, other);
@@ -264,13 +245,11 @@ frb_bv_or_x(VALUE self, VALUE other)
  *  Perform a boolean _xor_ operation on +bv1+ and
  *  +bv2+
  */
-VALUE
-frb_bv_xor(VALUE self, VALUE other)
-{
+VALUE frb_bv_xor(VALUE self, VALUE other) {
     FrtBitVector *bv1, *bv2;
     GET_BV(bv1, self);
     GET_BV(bv2, other);
-    return Data_Wrap_Struct(cBitVector, NULL, &frt_bv_destroy, frt_bv_xor(bv1, bv2));
+    return TypedData_Wrap_Struct(cBitVector, &frb_bv_t, frt_bv_xor(bv1, bv2));
 }
 
 /*
@@ -280,9 +259,7 @@ frb_bv_xor(VALUE self, VALUE other)
  *  Perform a boolean _xor_ operation on +bv1+ and
  *  +bv2+ in place on +bv1+
  */
-VALUE
-frb_bv_xor_x(VALUE self, VALUE other)
-{
+VALUE frb_bv_xor_x(VALUE self, VALUE other) {
     FrtBitVector *bv1, *bv2;
     GET_BV(bv1, self);
     GET_BV(bv2, other);
@@ -297,12 +274,10 @@ frb_bv_xor_x(VALUE self, VALUE other)
  *
  *  Perform a boolean _not_ operation on +bv+
  *  */
-VALUE
-frb_bv_not(VALUE self)
-{
+VALUE frb_bv_not(VALUE self) {
     FrtBitVector *bv;
     GET_BV(bv, self);
-    return Data_Wrap_Struct(cBitVector, NULL, &frt_bv_destroy, frt_bv_not(bv));
+    return TypedData_Wrap_Struct(cBitVector, &frb_bv_t, frt_bv_not(bv));
 }
 
 /*
@@ -311,9 +286,7 @@ frb_bv_not(VALUE self)
  *
  *  Perform a boolean _not_ operation on +bv+ in-place
  */
-VALUE
-frb_bv_not_x(VALUE self)
-{
+VALUE frb_bv_not_x(VALUE self) {
     FrtBitVector *bv;
     GET_BV(bv, self);
     frt_bv_not_x(bv);
@@ -328,9 +301,7 @@ frb_bv_not_x(VALUE self)
  *  before calling +#next+ or +#next_unset+. It isn't
  *  necessary for the other scan methods or for the +#each+ method.
  */
-VALUE
-frb_bv_reset_scan(VALUE self)
-{
+VALUE frb_bv_reset_scan(VALUE self) {
     FrtBitVector *bv;
     GET_BV(bv, self);
     frt_bv_scan_reset(bv);
@@ -346,9 +317,7 @@ frb_bv_reset_scan(VALUE self)
  *  if you want to scan from the beginning. It is automatically reset when you
  *  first create the bit vector.
  */
-VALUE
-frb_bv_next(VALUE self)
-{
+VALUE frb_bv_next(VALUE self) {
     FrtBitVector *bv;
     GET_BV(bv, self);
     return INT2FIX(frt_bv_scan_next(bv));
@@ -364,9 +333,7 @@ frb_bv_next(VALUE self)
  *  calling this method if you want to scan from the beginning. It is
  *  automatically reset when you first create the bit vector.
  */
-VALUE
-frb_bv_next_unset(VALUE self)
-{
+VALUE frb_bv_next_unset(VALUE self) {
     FrtBitVector *bv;
     GET_BV(bv, self);
     return INT2FIX(frt_bv_scan_next_unset(bv));
@@ -382,9 +349,7 @@ frb_bv_next_unset(VALUE self)
  *  return the number 10. If the bit vector has been negated than you should
  *  use the +#next_unset_from+ method.
  */
-VALUE
-frb_bv_next_from(VALUE self, VALUE rfrom)
-{
+VALUE frb_bv_next_from(VALUE self, VALUE rfrom) {
     FrtBitVector *bv;
     int from = FIX2INT(rfrom);
     GET_BV(bv, self);
@@ -404,9 +369,7 @@ frb_bv_next_from(VALUE self, VALUE rfrom)
  *  return the number 10. If the bit vector has not been negated than you
  *  should use the +#next_from+ method.
  */
-VALUE
-frb_bv_next_unset_from(VALUE self, VALUE rfrom)
-{
+VALUE frb_bv_next_unset_from(VALUE self, VALUE rfrom) {
     FrtBitVector *bv;
     int from = FIX2INT(rfrom);
     GET_BV(bv, self);
@@ -423,9 +386,7 @@ frb_bv_next_unset_from(VALUE self, VALUE rfrom)
  *  Iterate through all the set bits in the bit vector yielding each one in
  *  order
  */
-VALUE
-frb_bv_each(VALUE self)
-{
+VALUE frb_bv_each(VALUE self) {
     FrtBitVector *bv;
     int bit;
     GET_BV(bv, self);
@@ -434,8 +395,7 @@ frb_bv_each(VALUE self)
         while ((bit = frt_bv_scan_next_unset(bv)) >= 0) {
             rb_yield(INT2FIX(bit));
         }
-    }
-    else {
+    } else {
         while ((bit = frt_bv_scan_next(bv)) >= 0) {
             rb_yield(INT2FIX(bit));
         }
@@ -454,9 +414,7 @@ frb_bv_each(VALUE self)
  *
  *    bv = [1, 12, 45, 367, 455].inject(FrtBitVector.new) {|bv, i| bv.set(i)}
  */
-VALUE
-frb_bv_to_a(VALUE self)
-{
+VALUE frb_bv_to_a(VALUE self) {
     FrtBitVector *bv;
     int bit;
     VALUE ary;
@@ -524,9 +482,7 @@ static VALUE mUtils;
  * automatically scan unset bits if the BitVector has been flipped (using
  * +not+).
  */
-static void
-Init_BitVector(void)
-{
+static void Init_BitVector(void) {
     /* BitVector */
     cBitVector = rb_define_class_under(mUtils, "BitVector", rb_cObject);
     rb_define_alloc_func(cBitVector, frb_bv_alloc);
@@ -568,26 +524,33 @@ Init_BitVector(void)
  *******************/
 static VALUE cMultiMapper;
 
-static void
-frb_mulmap_free(void *p)
-{
+static void frb_mulmap_free(void *p) {
     object_del(p);
     frt_mulmap_destroy((FrtMultiMapper *)p);
 }
 
-static VALUE
-frb_mulmap_alloc(VALUE klass)
-{
+const size_t frb_mulmap_size() {
+    return sizeof(FrtMultiMapper);
+    (void)p;
+}
+
+const rb_data_type_t frb_mulmap_t = {
+    .wrap_struct_name = "FrbMultiMapper",
+    .function = {
+        .dfree = frb_mulmap_free,
+        .dsize = frb_mulmap_size
+    }
+};
+
+static VALUE frb_mulmap_alloc(VALUE klass) {
     FrtMultiMapper *mulmap = frt_mulmap_new();
-    VALUE rmulmap = Data_Wrap_Struct(klass, NULL, &frb_mulmap_free, mulmap);
+    VALUE rmulmap = TypedData_Wrap_Struct(klass, &frb_mulmap_t, mulmap);
     object_add(mulmap, rmulmap);
     return rmulmap;
 }
 
 /* XXX: Duplication from frb_add_mapping_i in r_analysis.c */
-static void frb_mulmap_add_mapping_i(FrtMultiMapper *mulmap, VALUE from,
-                                            const char *to)
-{
+static void frb_mulmap_add_mapping_i(FrtMultiMapper *mulmap, VALUE from, const char *to) {
     switch (TYPE(from)) {
         case T_STRING:
             frt_mulmap_add_mapping(mulmap, rs2s(from), to);
@@ -596,16 +559,13 @@ static void frb_mulmap_add_mapping_i(FrtMultiMapper *mulmap, VALUE from,
             frt_mulmap_add_mapping(mulmap, rb_id2name(SYM2ID(from)), to);
             break;
         default:
-            rb_raise(rb_eArgError,
-                     "cannot map from %s with MappingFilter",
-                     rs2s(rb_obj_as_string(from)));
+            rb_raise(rb_eArgError, "cannot map from %s with MappingFilter", rs2s(rb_obj_as_string(from)));
             break;
     }
 }
 
 /* XXX: Duplication from frb_add_mappings_i in r_analysis.c */
-static int frb_mulmap_add_mappings_i(VALUE key, VALUE value, VALUE arg)
-{
+static int frb_mulmap_add_mappings_i(VALUE key, VALUE value, VALUE arg) {
     if (key == Qundef) {
         return ST_CONTINUE;
     } else {
@@ -619,9 +579,7 @@ static int frb_mulmap_add_mappings_i(VALUE key, VALUE value, VALUE arg)
                 to = rb_id2name(SYM2ID(value));
                 break;
             default:
-                rb_raise(rb_eArgError,
-                         "cannot map to %s with MultiMapper",
-                         rs2s(rb_obj_as_string(key)));
+                rb_raise(rb_eArgError, "cannot map to %s with MultiMapper", rs2s(rb_obj_as_string(key)));
                 break;
         }
         if (TYPE(key) == T_ARRAY) {
@@ -645,9 +603,7 @@ static int frb_mulmap_add_mappings_i(VALUE key, VALUE value, VALUE arg)
  *
  *  Note that MultiMapper is immutable.
  */
-static VALUE
-frb_mulmap_init(VALUE self, VALUE rmappings)
-{
+static VALUE frb_mulmap_init(VALUE self, VALUE rmappings) {
     FrtMultiMapper *mulmap = DATA_PTR(self);
     rb_hash_foreach(rmappings, frb_mulmap_add_mappings_i, (VALUE)mulmap);
     frt_mulmap_compile(mulmap);
@@ -661,9 +617,7 @@ frb_mulmap_init(VALUE self, VALUE rmappings)
  *
  *  Performs all the mappings on the string.
  */
-VALUE
-frb_mulmap_map(VALUE self, VALUE rstring)
-{
+VALUE frb_mulmap_map(VALUE self, VALUE rstring) {
     FrtMultiMapper *mulmap = DATA_PTR(self);
     char *string = rs2s(rb_obj_as_string(rstring));
     char *mapped_string = frt_mulmap_dynamic_map(mulmap, string);
@@ -712,13 +666,10 @@ frb_mulmap_map(VALUE self, VALUE rstring)
  *     mapper = MultiMapper.new(mapping)
  *     mapped_string = mapper.map(string)
  */
-static void
-Init_MultiMapper(void)
-{
+static void Init_MultiMapper(void) {
     /* MultiMapper */
     cMultiMapper = rb_define_class_under(mUtils, "MultiMapper", rb_cObject);
     rb_define_alloc_func(cMultiMapper, frb_mulmap_alloc);
-
     rb_define_method(cMultiMapper, "initialize", frb_mulmap_init, 1);
     rb_define_method(cMultiMapper, "map", frb_mulmap_map, 1);
 }
@@ -726,8 +677,7 @@ Init_MultiMapper(void)
 /*********************
  *** PriorityQueue ***
  *********************/
-typedef struct PriQ
-{
+typedef struct PriQ {
     int size;
     int capa;
     int mem_capa;
@@ -737,18 +687,15 @@ typedef struct PriQ
 
 #define PQ_START_CAPA 32
 
-static bool frb_pq_lt(VALUE proc, VALUE v1, VALUE v2)
-{
+static bool frb_pq_lt(VALUE proc, VALUE v1, VALUE v2) {
     if (proc == Qnil) {
         return RTEST(rb_funcall(v1, id_lt, 1, v2));
-    }
-    else {
+    } else {
         return RTEST(rb_funcall(proc, id_call, 2, v1, v2));
     }
 }
 
-static void frb_pq_up(PriQ *pq)
-{
+static void frb_pq_up(PriQ *pq) {
     VALUE *heap = pq->heap;
     VALUE node;
     int i = pq->size;
@@ -764,8 +711,7 @@ static void frb_pq_up(PriQ *pq)
     heap[i] = node;
 }
 
-static void frb_pq_down(PriQ *pq)
-{
+static void frb_pq_down(PriQ *pq) {
     register int i = 1;
     register int j = 2;         /* i << 1; */
     register int k = 3;         /* j + 1;  */
@@ -789,8 +735,7 @@ static void frb_pq_down(PriQ *pq)
     heap[i] = node;
 }
 
-static void frb_pq_push(PriQ *pq, VALUE elem)
-{
+static void frb_pq_push(PriQ *pq, VALUE elem) {
     pq->size++;
     if (pq->size >= pq->mem_capa) {
         pq->mem_capa <<= 1;
@@ -803,8 +748,7 @@ static void frb_pq_push(PriQ *pq, VALUE elem)
 static VALUE cPriorityQueue;
 
 static void
-frb_pq_mark(void *p)
-{
+frb_pq_mark(void *p) {
     PriQ *pq = (PriQ *)p;
     int i;
     for (i = pq->size; i > 0; i--) {
@@ -812,24 +756,36 @@ frb_pq_mark(void *p)
     }
 }
 
-static void frb_pq_free(PriQ *pq)
-{
+static void frb_pq_free(void *p) {
+    PriQ *pq = (PriQ *)p;
     free(pq->heap);
     free(pq);
 }
 
-static VALUE
-frb_pq_alloc(VALUE klass)
-{
+const size_t frb_pq_t_size(const void *p) {
+    return sizeof(PriQ);
+    (void)p;
+}
+
+const rb_data_type_t frb_pq_t = {
+    .wrap_struct_name = "FrbPriorityQueue",
+    .function = {
+        .dmark = frb_pq_mark,
+        .dfree = frb_pq_free,
+        .dsize = frb_pq_t_size
+    }
+};
+
+static VALUE frb_pq_alloc(VALUE klass) {
     PriQ *pq = FRT_ALLOC_AND_ZERO(PriQ);
     pq->capa = PQ_START_CAPA;
     pq->mem_capa = PQ_START_CAPA;
     pq->heap = FRT_ALLOC_N(VALUE, PQ_START_CAPA);
     pq->proc = Qnil;
-    return Data_Wrap_Struct(klass, &frb_pq_mark, &frb_pq_free, pq);
+    return TypedData_Wrap_Struct(klass, &frb_pq_t, pq);
 }
 
-#define GET_PQ(pq, self) Data_Get_Struct(self, PriQ, pq)
+#define GET_PQ(pq, self) TypedData_Get_Struct(self, PriQ, &frb_pq_t, pq)
 /*
  *  call-seq:
  *     PriorityQueue.new(capacity = 32) -> new_pq
@@ -906,7 +862,7 @@ frb_pq_clone(VALUE self)
     new_pq->heap = FRT_ALLOC_N(VALUE, new_pq->mem_capa);
     memcpy(new_pq->heap, pq->heap, sizeof(VALUE) * (new_pq->size + 1));
 
-    return Data_Wrap_Struct(cPriorityQueue, &frb_pq_mark, &frb_pq_free, new_pq);
+    return TypedData_Wrap_Struct(cPriorityQueue, &frb_pq_t, new_pq);
 }
 
 /*

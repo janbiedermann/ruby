@@ -10,8 +10,7 @@
 
 #define WCQ(query) ((FrtWildCardQuery *)(query))
 
-static char *wcq_to_s(FrtQuery *self, FrtSymbol default_field)
-{
+static char *wcq_to_s(FrtQuery *self, FrtSymbol default_field) {
     char *buffer, *bptr;
     const char *field_name = rb_id2name(WCQ(self)->field);
     const char *pattern = WCQ(self)->pattern;
@@ -30,8 +29,7 @@ static char *wcq_to_s(FrtQuery *self, FrtSymbol default_field)
     return buffer;
 }
 
-bool frt_wc_match(const char *pattern, const char *text)
-{
+bool frt_wc_match(const char *pattern, const char *text) {
     const char *p = pattern, *t = text, *xt;
 
     /* include '\0' as we need to match empty string */
@@ -77,8 +75,7 @@ bool frt_wc_match(const char *pattern, const char *text)
     return false;
 }
 
-static FrtQuery *wcq_rewrite(FrtQuery *self, FrtIndexReader *ir)
-{
+static FrtQuery *wcq_rewrite(FrtQuery *self, FrtIndexReader *ir) {
     FrtQuery *q;
     const char *pattern = WCQ(self)->pattern;
     const char *first_star = strchr(pattern, FRT_WILD_STRING);
@@ -129,30 +126,28 @@ static FrtQuery *wcq_rewrite(FrtQuery *self, FrtIndexReader *ir)
     return q;
 }
 
-static void wcq_destroy(FrtQuery *self)
-{
+static void wcq_destroy(FrtQuery *self) {
     free(WCQ(self)->pattern);
     frt_q_destroy_i(self);
 }
 
-static unsigned long long wcq_hash(FrtQuery *self)
-{
+static unsigned long long wcq_hash(FrtQuery *self) {
     return frt_str_hash(rb_id2name(WCQ(self)->field)) ^ frt_str_hash(WCQ(self)->pattern);
 }
 
-static int wcq_eq(FrtQuery *self, FrtQuery *o)
-{
+static int wcq_eq(FrtQuery *self, FrtQuery *o) {
     return (strcmp(WCQ(self)->pattern, WCQ(o)->pattern) == 0)
         && (WCQ(self)->field == WCQ(o)->field);
 }
 
-FrtQuery *frt_wcq_new(FrtSymbol field, const char *pattern)
-{
-    FrtQuery *self = frt_q_new(FrtWildCardQuery);
+FrtQuery *frt_wcq_alloc(void) {
+    return frt_q_new(FrtWildCardQuery);
+}
 
+FrtQuery *frt_wcq_init(FrtQuery *self, FrtSymbol field, const char *pattern) {
     WCQ(self)->field        = field;
     WCQ(self)->pattern      = frt_estrdup(pattern);
-    FrtMTQMaxTerms(self)       = FRT_WILD_CARD_QUERY_MAX_TERMS;
+    FrtMTQMaxTerms(self)    = FRT_WILD_CARD_QUERY_MAX_TERMS;
 
     self->type              = WILD_CARD_QUERY;
     self->rewrite           = &wcq_rewrite;
@@ -163,4 +158,9 @@ FrtQuery *frt_wcq_new(FrtSymbol field, const char *pattern)
     self->create_weight_i   = &frt_q_create_weight_unsup;
 
     return self;
+}
+
+FrtQuery *frt_wcq_new(FrtSymbol field, const char *pattern) {
+    FrtQuery *self = frt_wcq_alloc();
+    return frt_wcq_init(self, field, pattern);
 }

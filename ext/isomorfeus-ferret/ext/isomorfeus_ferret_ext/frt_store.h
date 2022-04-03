@@ -336,7 +336,7 @@ extern FrtStore *frt_open_fs_store(const char *pathname);
  *
  * @return a newly allocated RAM FrtStore.
  */
-extern FrtStore *frt_open_ram_store();
+extern FrtStore *frt_open_ram_store(FrtStore *new_store);
 
 /**
  * Create a newly allocated in-memory or RAM FrtStore. Copy the contents of
@@ -349,7 +349,7 @@ extern FrtStore *frt_open_ram_store();
  * @param close_store close the store whose contents where copied
  * @return a newly allocated RAM FrtStore.
  */
-extern FrtStore *frt_open_ram_store_and_copy(FrtStore *store, bool close_store);
+extern FrtStore *frt_open_ram_store_and_copy(FrtStore *store, FrtStore *from_store, bool close_store);
 
 /**
  * Open a compound store. This is basically store which is stored within a
@@ -779,6 +779,8 @@ extern void frt_close_lock(FrtLock *lock);
 
 /* required by submodules
  * FIXME document. Perhaps include in different header?? */
+extern FrtStore *frt_store_alloc();
+extern FrtStore *frt_store_init(FrtStore *store);
 extern FrtStore *frt_store_new();
 extern void frt_store_destroy(FrtStore *store);
 extern FrtOutStream *frt_os_new();

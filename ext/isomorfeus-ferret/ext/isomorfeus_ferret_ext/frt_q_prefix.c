@@ -10,8 +10,7 @@
 
 #define PfxQ(query) ((FrtPrefixQuery *)(query))
 
-static char *prq_to_s(FrtQuery *self, FrtSymbol default_field)
-{
+static char *prq_to_s(FrtQuery *self, FrtSymbol default_field) {
     char *buffer, *bptr;
     const char *prefix = PfxQ(self)->prefix;
     size_t plen = strlen(prefix);
@@ -33,8 +32,7 @@ static char *prq_to_s(FrtQuery *self, FrtSymbol default_field)
     return buffer;
 }
 
-static FrtQuery *prq_rewrite(FrtQuery *self, FrtIndexReader *ir)
-{
+static FrtQuery *prq_rewrite(FrtQuery *self, FrtIndexReader *ir) {
     const int field_num = frt_fis_get_field_num(ir->fis, PfxQ(self)->field);
     FrtQuery *volatile q = frt_multi_tq_new_conf(PfxQ(self)->field,
                                           FrtMTQMaxTerms(self), 0.0);
@@ -61,30 +59,28 @@ static FrtQuery *prq_rewrite(FrtQuery *self, FrtIndexReader *ir)
     return q;
 }
 
-static void prq_destroy(FrtQuery *self)
-{
+static void prq_destroy(FrtQuery *self) {
     free(PfxQ(self)->prefix);
     frt_q_destroy_i(self);
 }
 
-static unsigned long long prq_hash(FrtQuery *self)
-{
+static unsigned long long prq_hash(FrtQuery *self) {
     return frt_str_hash(rb_id2name(PfxQ(self)->field)) ^ frt_str_hash(PfxQ(self)->prefix);
 }
 
-static int prq_eq(FrtQuery *self, FrtQuery *o)
-{
+static int prq_eq(FrtQuery *self, FrtQuery *o) {
     return (strcmp(PfxQ(self)->prefix, PfxQ(o)->prefix) == 0)
         && (PfxQ(self)->field == PfxQ(o)->field);
 }
 
-FrtQuery *frt_prefixq_new(FrtSymbol field, const char *prefix)
-{
-    FrtQuery *self = frt_q_new(FrtPrefixQuery);
+FrtQuery *frt_prefixq_alloc(void) {
+    return frt_q_new(FrtPrefixQuery);
+}
 
+FrtQuery *frt_prefixq_init(FrtQuery *self, FrtSymbol field, const char *prefix) {
     PfxQ(self)->field       = field;
     PfxQ(self)->prefix      = frt_estrdup(prefix);
-    FrtMTQMaxTerms(self)       = PREFIX_QUERY_MAX_TERMS;
+    FrtMTQMaxTerms(self)    = PREFIX_QUERY_MAX_TERMS;
 
     self->type              = PREFIX_QUERY;
     self->rewrite           = &prq_rewrite;
@@ -95,4 +91,9 @@ FrtQuery *frt_prefixq_new(FrtSymbol field, const char *prefix)
     self->create_weight_i   = &frt_q_create_weight_unsup;
 
     return self;
+}
+
+FrtQuery *frt_prefixq_new(FrtSymbol field, const char *prefix) {
+    FrtQuery *self = frt_prefixq_alloc();
+    return frt_prefixq_init(self, field, prefix);
 }

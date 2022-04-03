@@ -33,7 +33,7 @@ static void create_index(FrtStore *store)
 static FrtIndexWriter *create_iw_lucene(FrtStore *store)
 {
     create_index(store);
-    return frt_iw_open(store, frt_whitespace_analyzer_new(false), &lucene_config);
+    return frt_iw_open(NULL, store, frt_whitespace_analyzer_new(false), &lucene_config);
 }
 
 static void add_doc(FrtIndexWriter *iw, int id)
@@ -80,7 +80,7 @@ static void test_delete_leftover_files(TestCase *tc, void *data)
     frt_iw_close(iw);
 
     /* Delete one doc so we get a .del file: */
-    ir = frt_ir_open(store);
+    ir = frt_ir_open(NULL, store);
     frt_ir_delete_doc(ir, 7);
     Aiequal(1, ir->max_doc(ir) - ir->num_docs(ir));
 
@@ -142,7 +142,7 @@ static void test_delete_leftover_files(TestCase *tc, void *data)
 
 
     /* Open & close a writer: should delete the above files and nothing more: */
-    frt_iw_close(frt_iw_open(store, frt_whitespace_analyzer_new(false), &lucene_config));
+    frt_iw_close(frt_iw_open(NULL, store, frt_whitespace_analyzer_new(false), &lucene_config));
 
     store_after = frt_store_to_s(store);
 
@@ -159,7 +159,7 @@ static void test_delete_leftover_files(TestCase *tc, void *data)
 
 TestSuite *ts_file_deleter(TestSuite *suite)
 {
-    FrtStore *store = frt_open_ram_store();
+    FrtStore *store = frt_open_ram_store(NULL);
     suite = ADD_SUITE(suite);
 
     tst_run_test(suite, test_delete_leftover_files, store);

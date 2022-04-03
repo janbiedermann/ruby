@@ -1151,12 +1151,7 @@ static void isea_search_each(FrtSearcher *self, FrtQuery *query, FrtFilter *filt
  * Note: Unlike the offset_docnum in other search methods, this offset_docnum
  * refers to document number and not hit.
  */
-static int isea_search_unscored_w(FrtSearcher *self,
-                                  FrtWeight *weight,
-                                  int *buf,
-                                  int limit,
-                                  int offset_docnum)
-{
+static int isea_search_unscored_w(FrtSearcher *self, FrtWeight *weight, int *buf, int limit, int offset_docnum) {
     int count = 0;
     FrtScorer *scorer = weight->scorer(weight, ISEA(self)->ir);
     if (scorer) {
@@ -1170,12 +1165,7 @@ static int isea_search_unscored_w(FrtSearcher *self,
     return count;
 }
 
-static int isea_search_unscored(FrtSearcher *self,
-                                FrtQuery *query,
-                                int *buf,
-                                int limit,
-                                int offset_docnum)
-{
+static int isea_search_unscored(FrtSearcher *self, FrtQuery *query, int *buf, int limit, int offset_docnum) {
     int count;
     FrtWeight *weight = frt_q_weight(query, self);
     count = isea_search_unscored_w(self, weight, buf, limit, offset_docnum);
@@ -1183,8 +1173,7 @@ static int isea_search_unscored(FrtSearcher *self,
     return count;
 }
 
-static FrtQuery *isea_rewrite(FrtSearcher *self, FrtQuery *original)
-{
+static FrtQuery *isea_rewrite(FrtSearcher *self, FrtQuery *original) {
     int q_is_destroyed = false;
     FrtQuery *query = original;
     FrtQuery *rewritten_query = query->rewrite(query, ISEA(self)->ir);
@@ -1197,41 +1186,34 @@ static FrtQuery *isea_rewrite(FrtSearcher *self, FrtQuery *original)
     return query;
 }
 
-static FrtExplanation *isea_explain(FrtSearcher *self,
-                                 FrtQuery *query,
-                                 int doc_num)
-{
+static FrtExplanation *isea_explain(FrtSearcher *self, FrtQuery *query, int doc_num) {
     FrtWeight *weight = frt_q_weight(query, self);
     FrtExplanation *e = weight->explain(weight, ISEA(self)->ir, doc_num);
     weight->destroy(weight);
     return e;
 }
 
-static FrtExplanation *isea_explain_w(FrtSearcher *self, FrtWeight *w, int doc_num)
-{
+static FrtExplanation *isea_explain_w(FrtSearcher *self, FrtWeight *w, int doc_num) {
     return w->explain(w, ISEA(self)->ir, doc_num);
 }
 
-static FrtTermVector *isea_get_term_vector(FrtSearcher *self,
-                                          const int doc_num,
-                                          FrtSymbol field)
-{
+static FrtTermVector *isea_get_term_vector(FrtSearcher *self, const int doc_num, FrtSymbol field) {
     FrtIndexReader *ir = ISEA(self)->ir;
     return ir->term_vector(ir, doc_num, field);
 }
 
-static void isea_close(FrtSearcher *self)
-{
+static void isea_close(FrtSearcher *self) {
     if (ISEA(self)->ir && ISEA(self)->close_ir) {
         frt_ir_close(ISEA(self)->ir);
     }
     free(self);
 }
 
-FrtSearcher *frt_isea_new(FrtIndexReader *ir)
-{
-    FrtSearcher *self          = (FrtSearcher *)FRT_ALLOC(FrtIndexSearcher);
+FrtSearcher *frt_isea_alloc(void) {
+    return (FrtSearcher *)FRT_ALLOC(FrtIndexSearcher);
+}
 
+FrtSearcher *frt_isea_init(FrtSearcher *self, FrtIndexReader *ir) {
     ISEA(self)->ir          = ir;
     ISEA(self)->close_ir    = true;
 
@@ -1255,6 +1237,11 @@ FrtSearcher *frt_isea_new(FrtIndexReader *ir)
     self->close             = &isea_close;
 
     return self;
+}
+
+FrtSearcher *frt_isea_new(FrtIndexReader *ir) {
+    FrtSearcher *self = frt_isea_alloc();
+    return frt_isea_init(self, ir);
 }
 
 /***************************************************************************
@@ -1599,8 +1586,7 @@ static int msea_search_unscored(FrtSearcher *self,
                                 FrtQuery *query,
                                 int *buf,
                                 int limit,
-                                int offset_docnum)
-{
+                                int offset_docnum) {
     int count;
     FrtWeight *weight = frt_q_weight(query, self);
     count = msea_search_unscored_w(self, weight, buf, limit, offset_docnum);
@@ -1636,8 +1622,7 @@ static FrtTopDocs *msea_search_w(FrtSearcher *self,
                               FrtFilter *filter,
                               FrtSort *sort,
                               FrtPostFilter *post_filter,
-                              bool load_fields)
-{
+                              bool load_fields) {
     int max_size = num_docs + (num_docs == INT_MAX ? 0 : first_doc);
     int i;
     int total_hits = 0;
@@ -1705,8 +1690,7 @@ static FrtTopDocs *msea_search(FrtSearcher *self,
                             FrtFilter *filter,
                             FrtSort *sort,
                             FrtPostFilter *post_filter,
-                            bool load_fields)
-{
+                            bool load_fields) {
     FrtTopDocs *td;
     FrtWeight *weight = frt_q_weight(query, self);
     td = msea_search_w(self, weight, first_doc, num_docs, filter,
@@ -1715,8 +1699,7 @@ static FrtTopDocs *msea_search(FrtSearcher *self,
     return td;
 }
 
-static FrtQuery *msea_rewrite(FrtSearcher *self, FrtQuery *original)
-{
+static FrtQuery *msea_rewrite(FrtSearcher *self, FrtQuery *original) {
     int i;
     FrtSearcher *s;
     FrtMultiSearcher *msea = MSEA(self);
@@ -1735,8 +1718,7 @@ static FrtQuery *msea_rewrite(FrtSearcher *self, FrtQuery *original)
     return rewritten;
 }
 
-static FrtExplanation *msea_explain(FrtSearcher *self, FrtQuery *query, int doc_num)
-{
+static FrtExplanation *msea_explain(FrtSearcher *self, FrtQuery *query, int doc_num) {
     FrtMultiSearcher *msea = MSEA(self);
     int i = msea_get_searcher_index(self, doc_num);
     FrtWeight *w = frt_q_weight(query, self);
@@ -1746,8 +1728,7 @@ static FrtExplanation *msea_explain(FrtSearcher *self, FrtQuery *query, int doc_
     return e;
 }
 
-static FrtExplanation *msea_explain_w(FrtSearcher *self, FrtWeight *w, int doc_num)
-{
+static FrtExplanation *msea_explain_w(FrtSearcher *self, FrtWeight *w, int doc_num) {
     FrtMultiSearcher *msea = MSEA(self);
     int i = msea_get_searcher_index(self, doc_num);
     FrtSearcher *s = msea->searchers[i];
@@ -1755,22 +1736,18 @@ static FrtExplanation *msea_explain_w(FrtSearcher *self, FrtWeight *w, int doc_n
     return e;
 }
 
-static FrtTermVector *msea_get_term_vector(FrtSearcher *self, const int doc_num,
-                                        FrtSymbol field)
-{
+static FrtTermVector *msea_get_term_vector(FrtSearcher *self, const int doc_num, FrtSymbol field) {
     FrtMultiSearcher *msea = MSEA(self);
     int i = msea_get_searcher_index(self, doc_num);
     FrtSearcher *s = msea->searchers[i];
     return s->get_term_vector(s, doc_num - msea->starts[i], field);
 }
 
-static FrtSimilarity *msea_get_similarity(FrtSearcher *self)
-{
+static FrtSimilarity *msea_get_similarity(FrtSearcher *self) {
     return self->similarity;
 }
 
-static void msea_close(FrtSearcher *self)
-{
+static void msea_close(FrtSearcher *self) {
     int i;
     FrtSearcher *s;
     FrtMultiSearcher *msea = MSEA(self);
@@ -1785,10 +1762,12 @@ static void msea_close(FrtSearcher *self)
     free(self);
 }
 
-FrtSearcher *frt_msea_new(FrtSearcher **searchers, int s_cnt, bool close_subs)
-{
+FrtSearcher *frt_msea_alloc(void) {
+    return (FrtSearcher *)FRT_ALLOC(FrtMultiSearcher);
+}
+
+FrtSearcher *frt_msea_init(FrtSearcher *self, FrtSearcher **searchers, int s_cnt, bool close_subs) {
     int i, max_doc = 0;
-    FrtSearcher *self = (FrtSearcher *)FRT_ALLOC(FrtMultiSearcher);
     int *starts = FRT_ALLOC_N(int, s_cnt + 1);
     for (i = 0; i < s_cnt; i++) {
         starts[i] = max_doc;
@@ -1821,4 +1800,9 @@ FrtSearcher *frt_msea_new(FrtSearcher **searchers, int s_cnt, bool close_subs)
     self->get_similarity        = &msea_get_similarity;
     self->close                 = &msea_close;
     return self;
+}
+
+FrtSearcher *frt_msea_new(FrtSearcher **searchers, int s_cnt, bool close_subs) {
+    FrtSearcher *self = frt_msea_alloc();
+    return frt_msea_init(self, searchers, s_cnt, close_subs);
 }

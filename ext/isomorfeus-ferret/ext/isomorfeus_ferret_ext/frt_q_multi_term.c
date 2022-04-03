@@ -15,14 +15,12 @@
  * BoostedTerm
  ***************************************************************************/
 
-typedef struct BoostedTerm
-{
+typedef struct BoostedTerm {
     char *term;
     float boost;
 } BoostedTerm;
 
-static bool boosted_term_less_than(const BoostedTerm *bt1, const BoostedTerm *bt2)
-{
+static bool boosted_term_less_than(const BoostedTerm *bt1, const BoostedTerm *bt2) {
     // if (bt1->boost == bt2->boost) { return (strcmp(bt1->term, bt2->term) < 0); }
     // return (bt1->boost < bt2->boost);
     if (bt1->boost < bt2->boost) {
@@ -34,14 +32,12 @@ static bool boosted_term_less_than(const BoostedTerm *bt1, const BoostedTerm *bt
     return (strcmp(bt1->term, bt2->term) < 0);
 }
 
-static void boosted_term_destroy(BoostedTerm *self)
-{
+static void boosted_term_destroy(BoostedTerm *self) {
     free(self->term);
     free(self);
 }
 
-static BoostedTerm *boosted_term_new(const char *term, float boost)
-{
+static BoostedTerm *boosted_term_new(const char *term, float boost) {
     BoostedTerm *self = FRT_ALLOC(BoostedTerm);
     self->term = frt_estrdup(term);
     self->boost = boost;
@@ -54,8 +50,7 @@ static BoostedTerm *boosted_term_new(const char *term, float boost)
 
 #define TDE_READ_SIZE 16
 
-typedef struct TermDocEnumWrapper
-{
+typedef struct TermDocEnumWrapper {
     const char  *term;
     FrtTermDocEnum *tde;
     float        boost;
@@ -67,14 +62,11 @@ typedef struct TermDocEnumWrapper
     int          pointer_max;
 } TermDocEnumWrapper;
 
-static bool tdew_less_than(const TermDocEnumWrapper *tdew1,
-                           const TermDocEnumWrapper *tdew2)
-{
+static bool tdew_less_than(const TermDocEnumWrapper *tdew1, const TermDocEnumWrapper *tdew2) {
     return (tdew1->doc < tdew2->doc);
 }
 
-static bool tdew_next(TermDocEnumWrapper *self)
-{
+static bool tdew_next(TermDocEnumWrapper *self) {
     self->pointer++;
     if (self->pointer >= self->pointer_max) {
         /* refill buffer */
@@ -91,8 +83,7 @@ static bool tdew_next(TermDocEnumWrapper *self)
     return true;
 }
 
-static bool tdew_skip_to(TermDocEnumWrapper *self, int doc_num)
-{
+static bool tdew_skip_to(TermDocEnumWrapper *self, int doc_num) {
     FrtTermDocEnum *tde = self->tde;
 
     while (++(self->pointer) < self->pointer_max) {
@@ -115,15 +106,12 @@ static bool tdew_skip_to(TermDocEnumWrapper *self, int doc_num)
     }
 }
 
-static void tdew_destroy(TermDocEnumWrapper *self)
-{
+static void tdew_destroy(TermDocEnumWrapper *self) {
     self->tde->close(self->tde);
     free(self);
 }
 
-static TermDocEnumWrapper *tdew_new(const char *term, FrtTermDocEnum *tde,
-                                    float boost)
-{
+static TermDocEnumWrapper *tdew_new(const char *term, FrtTermDocEnum *tde, float boost) {
     TermDocEnumWrapper *self = FRT_ALLOC_AND_ZERO(TermDocEnumWrapper);
     self->term = term;
     self->tde = tde;
@@ -139,8 +127,7 @@ static TermDocEnumWrapper *tdew_new(const char *term, FrtTermDocEnum *tde,
 #define SCORE_CACHE_SIZE 32
 #define MTSc(scorer) ((MultiTermScorer *)(scorer))
 
-typedef struct MultiTermScorer
-{
+typedef struct MultiTermScorer {
     FrtScorer                super;
     FrtSymbol                field;
     frt_uchar                *norms;
@@ -153,14 +140,12 @@ typedef struct MultiTermScorer
     float                 total_score;
 } MultiTermScorer;
 
-static float multi_tsc_score(FrtScorer *self)
-{
+static float multi_tsc_score(FrtScorer *self) {
     return MTSc(self)->total_score * MTSc(self)->weight_value
         * frt_sim_decode_norm(self->similarity, MTSc(self)->norms[self->doc]);
 }
 
-static bool multi_tsc_next(FrtScorer *self)
-{
+static bool multi_tsc_next(FrtScorer *self) {
     int curr_doc;
     float total_score = 0.0f;
     TermDocEnumWrapper *tdew;
@@ -188,15 +173,13 @@ static bool multi_tsc_next(FrtScorer *self)
         int freq = tdew->freq;
         if (freq < SCORE_CACHE_SIZE) {
             total_score += mtsc->score_cache[freq] * tdew->boost;
-        }
-        else {
+        } else {
             total_score += frt_sim_tf(self->similarity, (float)freq) * tdew->boost;
         }
 
         if (tdew_next(tdew)) {
             frt_pq_down(tdew_pq);
-        }
-        else {
+        } else {
             frt_pq_pop(tdew_pq);
         }
 
@@ -206,8 +189,7 @@ static bool multi_tsc_next(FrtScorer *self)
     return true;
 }
 
-static bool multi_tsc_advance_to(FrtScorer *self, int target_doc_num)
-{
+static bool multi_tsc_advance_to(FrtScorer *self, int target_doc_num) {
     FrtPriorityQueue *tdew_pq = MTSc(self)->tdew_pq;
     TermDocEnumWrapper *tdew;
     if (tdew_pq == NULL) {
@@ -230,8 +212,7 @@ static bool multi_tsc_advance_to(FrtScorer *self, int target_doc_num)
            && (target_doc_num > tdew->doc)) {
         if (tdew_skip_to(tdew, target_doc_num)) {
             frt_pq_down(tdew_pq);
-        }
-        else {
+        } else {
             frt_pq_pop(tdew_pq);
         }
     }
@@ -239,13 +220,11 @@ static bool multi_tsc_advance_to(FrtScorer *self, int target_doc_num)
     return (frt_pq_top(tdew_pq) == NULL) ? false : true;
 }
 
-static bool multi_tsc_skip_to(FrtScorer *self, int target_doc_num)
-{
+static bool multi_tsc_skip_to(FrtScorer *self, int target_doc_num) {
     return multi_tsc_advance_to(self, target_doc_num) && multi_tsc_next(self);
 }
 
-static FrtExplanation *multi_tsc_explain(FrtScorer *self, int doc_num)
-{
+static FrtExplanation *multi_tsc_explain(FrtScorer *self, int doc_num) {
     MultiTermScorer *mtsc = MTSc(self);
     TermDocEnumWrapper *tdew;
 
@@ -270,8 +249,7 @@ static FrtExplanation *multi_tsc_explain(FrtScorer *self, int doc_num)
              * again */
             if (tdew_next(tdew)) {
                 frt_pq_down(tdew_pq);
-            }
-            else {
+            }  else {
                 frt_pq_pop(tdew_pq);
             }
 
@@ -279,14 +257,12 @@ static FrtExplanation *multi_tsc_explain(FrtScorer *self, int doc_num)
                  && tdew->doc == curr_doc);
         expl->value = total_score;
         return expl;
-    }
-    else {
+    } else {
         return frt_expl_new(0.0f, "None of the required terms exist in the index");
     }
 }
 
-static void multi_tsc_destroy(FrtScorer *self)
-{
+static void multi_tsc_destroy(FrtScorer *self) {
     int i;
     TermDocEnumWrapper **tdew_a = MTSc(self)->tdew_a;
     for (i = MTSc(self)->tdew_cnt - 1; i >= 0; i--) {
@@ -297,10 +273,7 @@ static void multi_tsc_destroy(FrtScorer *self)
     frt_scorer_destroy_i(self);
 }
 
-static FrtScorer *multi_tsc_new(FrtWeight *weight, FrtSymbol field,
-                             TermDocEnumWrapper **tdew_a, int tdew_cnt,
-                             frt_uchar *norms)
-{
+static FrtScorer *multi_tsc_new(FrtWeight *weight, FrtSymbol field, TermDocEnumWrapper **tdew_a, int tdew_cnt, frt_uchar *norms) {
     int i;
     FrtScorer *self = frt_scorer_new(MultiTermScorer, weight->similarity);
 
@@ -328,13 +301,11 @@ static FrtScorer *multi_tsc_new(FrtWeight *weight, FrtSymbol field,
  * MultiTermWeight
  ***************************************************************************/
 
-static char *multi_tw_to_s(FrtWeight *self)
-{
+static char *multi_tw_to_s(FrtWeight *self) {
     return frt_strfmt("MultiTermWeight(%f)", self->value);
 }
 
-static FrtScorer *multi_tw_scorer(FrtWeight *self, FrtIndexReader *ir)
-{
+static FrtScorer *multi_tw_scorer(FrtWeight *self, FrtIndexReader *ir) {
     FrtScorer *multi_tsc = NULL;
     FrtPriorityQueue *boosted_terms = MTQ(self->query)->boosted_terms;
     const int field_num = frt_fis_get_field_num(ir->fis, MTQ(self->query)->field);
@@ -360,16 +331,14 @@ static FrtScorer *multi_tw_scorer(FrtWeight *self, FrtIndexReader *ir)
         if (tdew_cnt) {
             multi_tsc = multi_tsc_new(self, MTQ(self->query)->field, tdew_a,
                                       tdew_cnt, frt_ir_get_norms_i(ir, field_num));
-        }
-        else {
+        } else {
             free(tdew_a);
         }
     }
     return multi_tsc;
 }
 
-static FrtExplanation *multi_tw_explain(FrtWeight *self, FrtIndexReader *ir, int doc_num)
-{
+static FrtExplanation *multi_tw_explain(FrtWeight *self, FrtIndexReader *ir, int doc_num) {
     FrtExplanation *expl;
     FrtExplanation *idf_expl1;
     FrtExplanation *idf_expl2;
@@ -442,8 +411,7 @@ static FrtExplanation *multi_tw_explain(FrtWeight *self, FrtIndexReader *ir, int
     if ((scorer = self->scorer(self, ir)) != NULL) {
         tf_expl = scorer->explain(scorer, doc_num);
         scorer->destroy(scorer);
-    }
-    else {
+    } else {
         tf_expl = frt_expl_new(0.0f, "no terms were found");
     }
     frt_expl_add_detail(field_expl, tf_expl);
@@ -464,16 +432,14 @@ static FrtExplanation *multi_tw_explain(FrtWeight *self, FrtIndexReader *ir, int
     if (query_expl->value == 1.0f) {
         frt_expl_destroy(expl);
         return field_expl;
-    }
-    else {
+    } else {
         expl->value = (query_expl->value * field_expl->value);
         frt_expl_add_detail(expl, field_expl);
         return expl;
     }
 }
 
-static FrtWeight *multi_tw_new(FrtQuery *query, FrtSearcher *searcher)
-{
+static FrtWeight *multi_tw_new(FrtQuery *query, FrtSearcher *searcher) {
     int i;
     int doc_freq         = 0;
     FrtWeight *self         = w_new(FrtWeight, query);
@@ -502,8 +468,7 @@ static FrtWeight *multi_tw_new(FrtQuery *query, FrtSearcher *searcher)
  * MultiTermQuery
  ***************************************************************************/
 
-static char *multi_tq_to_s(FrtQuery *self, FrtSymbol default_field)
-{
+static char *multi_tq_to_s(FrtQuery *self, FrtSymbol default_field) {
     int i;
     FrtPriorityQueue *boosted_terms = MTQ(self)->boosted_terms, *bt_pq_clone;
     BoostedTerm *bt;
@@ -551,14 +516,12 @@ static char *multi_tq_to_s(FrtQuery *self, FrtSymbol default_field)
     return buffer;
 }
 
-static void multi_tq_destroy_i(FrtQuery *self)
-{
+static void multi_tq_destroy_i(FrtQuery *self) {
     frt_pq_destroy(MTQ(self)->boosted_terms);
     frt_q_destroy_i(self);
 }
 
-static void multi_tq_extract_terms(FrtQuery *self, FrtHashSet *terms)
-{
+static void multi_tq_extract_terms(FrtQuery *self, FrtHashSet *terms) {
     int i;
     FrtPriorityQueue *boosted_terms = MTQ(self)->boosted_terms;
     for (i = boosted_terms->size; i > 0; i--) {
@@ -567,8 +530,7 @@ static void multi_tq_extract_terms(FrtQuery *self, FrtHashSet *terms)
     }
 }
 
-static unsigned long long multi_tq_hash(FrtQuery *self)
-{
+static unsigned long long multi_tq_hash(FrtQuery *self) {
     int i;
     unsigned long long hash = frt_str_hash(rb_id2name(MTQ(self)->field));
     FrtPriorityQueue *boosted_terms = MTQ(self)->boosted_terms;
@@ -579,8 +541,7 @@ static unsigned long long multi_tq_hash(FrtQuery *self)
     return hash;
 }
 
-static int multi_tq_eq(FrtQuery *self, FrtQuery *o)
-{
+static int multi_tq_eq(FrtQuery *self, FrtQuery *o) {
     int i;
     FrtPriorityQueue *boosted_terms1 = MTQ(self)->boosted_terms;
     FrtPriorityQueue *boosted_terms2 = MTQ(o)->boosted_terms;
@@ -599,9 +560,7 @@ static int multi_tq_eq(FrtQuery *self, FrtQuery *o)
     return true;
 }
 
-static FrtMatchVector *multi_tq_get_matchv_i(FrtQuery *self, FrtMatchVector *mv,
-                                          FrtTermVector *tv)
-{
+static FrtMatchVector *multi_tq_get_matchv_i(FrtQuery *self, FrtMatchVector *mv, FrtTermVector *tv) {
     if (tv->field == MTQ(self)->field) {
         int i;
         FrtPriorityQueue *boosted_terms = MTQ(self)->boosted_terms;
@@ -620,16 +579,15 @@ static FrtMatchVector *multi_tq_get_matchv_i(FrtQuery *self, FrtMatchVector *mv,
     return mv;
 }
 
-FrtQuery *frt_multi_tq_new_conf(FrtSymbol field, int max_terms, float min_boost)
-{
-    FrtQuery *self;
+FrtQuery *frt_multi_tq_alloc() {
+    return frt_q_new(FrtMultiTermQuery);
+}
 
+FrtQuery *frt_multi_tq_init_conf(FrtQuery *self, FrtSymbol field, int max_terms, float min_boost) {
     if (max_terms <= 0) {
-        FRT_RAISE(FRT_ARG_ERROR, ":max_terms must be greater than or equal to zero. "
-              "%d < 0. ", max_terms);
+        FRT_RAISE(FRT_ARG_ERROR, ":max_terms must be greater than or equal to zero. %d < 0. ", max_terms);
+        free(self);
     }
-
-    self                     = frt_q_new(FrtMultiTermQuery);
 
     MTQ(self)->field         = field;
     MTQ(self)->boosted_terms = frt_pq_new(max_terms,
@@ -649,13 +607,16 @@ FrtQuery *frt_multi_tq_new_conf(FrtSymbol field, int max_terms, float min_boost)
     return self;
 }
 
-FrtQuery *frt_multi_tq_new(FrtSymbol field)
-{
+FrtQuery *frt_multi_tq_new_conf(FrtSymbol field, int max_terms, float min_boost) {
+    FrtQuery *self = frt_multi_tq_alloc();
+    return frt_multi_tq_init_conf(self, field, max_terms, min_boost);
+}
+
+FrtQuery *frt_multi_tq_new(FrtSymbol field) {
     return frt_multi_tq_new_conf(field, MULTI_TERM_QUERY_MAX_TERMS, 0.0f);
 }
 
-void frt_multi_tq_add_term_boost(FrtQuery *self, const char *term, float boost)
-{
+void frt_multi_tq_add_term_boost(FrtQuery *self, const char *term, float boost) {
     if (boost > MTQ(self)->min_boost && term && term[0]) {
         BoostedTerm *bt = boosted_term_new(term, boost);
         FrtPriorityQueue *bt_pq = MTQ(self)->boosted_terms;
@@ -666,7 +627,6 @@ void frt_multi_tq_add_term_boost(FrtQuery *self, const char *term, float boost)
     }
 }
 
-void frt_multi_tq_add_term(FrtQuery *self, const char *term)
-{
+void frt_multi_tq_add_term(FrtQuery *self, const char *term) {
     frt_multi_tq_add_term_boost(self, term, 1.0f);
 }

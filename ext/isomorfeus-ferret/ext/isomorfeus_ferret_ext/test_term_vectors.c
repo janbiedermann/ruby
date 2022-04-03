@@ -85,7 +85,7 @@ static FrtOffset *create_tv_offsets(FrtMemoryPool *mp)
 static void test_tv_single_doc(TestCase *tc, void *data)
 {
     int i, j;
-    FrtStore *store = frt_open_ram_store();
+    FrtStore *store = frt_open_ram_store(NULL);
     FrtMemoryPool *mp = (FrtMemoryPool *)data;
     FrtFieldsReader *fr;
     FrtFieldsWriter *fw;
@@ -227,7 +227,7 @@ static void test_tv_single_doc(TestCase *tc, void *data)
 static void test_tv_multi_doc(TestCase *tc, void *data)
 {
     int i, j;
-    FrtStore *store = frt_open_ram_store();
+    FrtStore *store = frt_open_ram_store(NULL);
     FrtMemoryPool *mp = (FrtMemoryPool *)data;
     FrtFieldsReader *fr;
     FrtFieldsWriter *fw;

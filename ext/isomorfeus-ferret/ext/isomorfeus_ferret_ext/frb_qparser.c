@@ -29,22 +29,35 @@ extern FrtAnalyzer *frb_get_cwrapped_analyzer(VALUE ranalyzer);
  *
  ****************************************************************************/
 
-static void
-frb_qp_free(void *p)
-{
+static void frb_qp_free(void *p) {
     object_del(p);
     frt_qp_destroy((FrtQParser *)p);
 }
 
-static void
-frb_qp_mark(void *p)
-{
+static void frb_qp_mark(void *p) {
     frb_gc_mark(((FrtQParser *)p)->analyzer);
 }
 
-static FrtHashSet *
-frb_get_fields(VALUE rfields, FrtHashSet *other_fields)
-{
+const size_t frb_qp_size(const void *p) {
+    return sizeof(FrtQParser);
+    (void)p;
+}
+
+const rb_data_type_t frb_qp_t = {
+    .wrap_struct_name = "FrbQueryParser",
+    .function = {
+        .dmark = frb_qp_mark,
+        .dfree = frb_qp_free,
+        .dsize = frb_qp_size
+    }
+};
+
+static VALUE frb_qp_alloc(VALUE rclass) {
+    FrtQParser *qp = frt_qp_alloc();
+    return TypedData_Wrap_Struct(rclass, &frb_qp_t, qp);
+}
+
+static FrtHashSet *frb_get_fields(VALUE rfields, FrtHashSet *other_fields) {
     VALUE rval;
     FrtHashSet *fields;
     char *s, *p, *str;
@@ -147,9 +160,7 @@ hs_safe_merge(FrtHashSet *merger, FrtHashSet *mergee)
  *                           Note: the default is set to true in the Index
  *                           class.
  */
-static VALUE
-frb_qp_init(int argc, VALUE *argv, VALUE self)
-{
+static VALUE frb_qp_init(int argc, VALUE *argv, VALUE self) {
     VALUE roptions = Qnil;
     VALUE rval;
     FrtAnalyzer *analyzer = NULL;
@@ -157,7 +168,7 @@ frb_qp_init(int argc, VALUE *argv, VALUE self)
     FrtHashSet *all_fields = NULL;
     FrtHashSet *tkz_fields = NULL;
     FrtQParser *qp;
-
+    TypedData_Get_Struct(self, FrtQParser, &frb_qp_t, qp);
     if (rb_scan_args(argc, argv, "01", &roptions) > 0) {
         if (TYPE(roptions) == T_HASH) {
             if (Qnil != (rval = rb_hash_aref(roptions, sym_default_field))) {
@@ -186,10 +197,7 @@ frb_qp_init(int argc, VALUE *argv, VALUE self)
     if (!analyzer) {
         analyzer = frt_standard_analyzer_new(true);
     }
-    qp = frt_qp_new(analyzer);
-    //frt_hs_destroy(qp->all_fields);
-    //frt_hs_destroy(qp->def_fields);
-    //frt_hs_destroy(qp->tokenized_fields);
+    qp = frt_qp_init(qp, analyzer);
     if (def_fields) hs_safe_merge(all_fields, def_fields);
     if (tkz_fields) hs_safe_merge(all_fields, tkz_fields);
     qp->all_fields = all_fields;
@@ -230,7 +238,6 @@ frb_qp_init(int argc, VALUE *argv, VALUE self)
             qp->use_typed_range_query = RTEST(rval);
         }
     }
-    Frt_Wrap_Struct(self, frb_qp_mark, frb_qp_free, qp);
     object_add(qp, self);
     return self;
 }
@@ -292,9 +299,7 @@ frb_qp_get_fields(VALUE self)
  *
  *  Set the list of fields. These fields are expanded for searches on "*".
  */
-static VALUE
-frb_qp_set_fields(VALUE self, VALUE rfields)
-{
+static VALUE frb_qp_set_fields(VALUE self, VALUE rfields) {
     GET_QP;
     FrtHashSet *fields = frb_get_fields(rfields, NULL);
 
@@ -612,7 +617,7 @@ Init_QueryParser(void)
 
     /* QueryParser */
     cQueryParser = rb_define_class_under(mFerret, "QueryParser", rb_cObject);
-    rb_define_alloc_func(cQueryParser, frb_data_alloc);
+    rb_define_alloc_func(cQueryParser, frb_qp_alloc);
 
     rb_define_method(cQueryParser, "initialize", frb_qp_init, -1);
     rb_define_method(cQueryParser, "parse", frb_qp_parse, 1);

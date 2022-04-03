@@ -10,7 +10,7 @@ void test_write_to(TestCase *tc, void *data)
 {
     int i;
     char *tmp;
-    FrtStore *ram_store = frt_open_ram_store();
+    FrtStore *ram_store = frt_open_ram_store(NULL);
     FrtStore *fs_store = frt_open_fs_store("./test/testdir/store");
     char str[18] = "³³ øãíøäÄ";
     char buf[18000] = "";
@@ -43,7 +43,7 @@ void test_write_to(TestCase *tc, void *data)
 
     Aiequal(17021, fs_store->length(fs_store, "_rw_funny_string.cfs"));
     frt_store_deref(ram_store);
-    ram_store = frt_open_ram_store_and_copy(fs_store, false);
+    ram_store = frt_open_ram_store_and_copy(NULL, fs_store, false);
 
     istream = ram_store->open_input(ram_store, "_rw_funny_string.cfs");
     Asequal(str, tmp = frt_is_read_string(istream));
@@ -63,7 +63,7 @@ void test_write_to(TestCase *tc, void *data)
  */
 TestSuite *ts_ram_store(TestSuite *suite)
 {
-    FrtStore *store = frt_open_ram_store();
+    FrtStore *store = frt_open_ram_store(NULL);
 
     suite = ADD_SUITE(suite);
 
