@@ -13,7 +13,7 @@ static void frb_bv_free(void *p) {
     frt_bv_destroy((FrtBitVector *)p);
 }
 
-const size_t frb_bv_size(const void *p) {
+static size_t frb_bv_size(const void *p) {
     return sizeof(FrtBitVector);
     (void)p;
 }
@@ -529,7 +529,7 @@ static void frb_mulmap_free(void *p) {
     frt_mulmap_destroy((FrtMultiMapper *)p);
 }
 
-const size_t frb_mulmap_size() {
+static size_t frb_mulmap_size() {
     return sizeof(FrtMultiMapper);
     (void)p;
 }
@@ -762,7 +762,7 @@ static void frb_pq_free(void *p) {
     free(pq);
 }
 
-const size_t frb_pq_t_size(const void *p) {
+static size_t frb_pq_t_size(const void *p) {
     return sizeof(PriQ);
     (void)p;
 }

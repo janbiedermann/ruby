@@ -154,7 +154,7 @@ frb_fi_get_params(VALUE roptions,
     }
 }
 
-const size_t frb_fi_size(const void *p) {
+static size_t frb_fi_size(const void *p) {
     return sizeof(FrtFieldInfo);
     (void)p;
 }
@@ -380,7 +380,7 @@ static void frb_fis_mark(void *p) {
     }
 }
 
-const size_t frb_field_infos_t_size(const void *p) {
+static size_t frb_field_infos_t_size(const void *p) {
     return sizeof(FrtFieldInfos);
     (void)p;
 }
@@ -670,7 +670,7 @@ static void frb_te_free(void *p) {
     te->close(te);
 }
 
-const size_t frb_te_size(const void *p) {
+static size_t frb_te_size(const void *p) {
     return sizeof(FrtTermEnum);
     (void)p;
 }
@@ -896,7 +896,7 @@ static void frb_tde_free(void *p) {
     tde->close(tde);
 }
 
-const size_t frb_tde_size(const void *p) {
+static size_t frb_tde_size(const void *p) {
     return sizeof(FrtTermDocEnum);
     (void)p;
 }
@@ -1316,7 +1316,7 @@ frb_iw_close(VALUE self)
  *
  * See FrtIndexWriter for more options.
  */
-const size_t frb_index_writer_t_size(const void *p) {
+static size_t frb_index_writer_t_size(const void *p) {
     return sizeof(FrtIndexWriter);
     (void)p;
 }
@@ -1607,7 +1607,7 @@ void frb_ir_mark(void *p) {
     }
 }
 
-const size_t frb_index_reader_t_size(const void *p) {
+static size_t frb_index_reader_t_size(const void *p) {
     return sizeof(FrtMultiReader);
     (void)p;
 }
@@ -1991,7 +1991,7 @@ static void frb_lzd_data_free(void *p) {
     frt_lazy_doc_close((FrtLazyDoc *)p);
 }
 
-const size_t frb_lazy_doc_size(const void *p) {
+static size_t frb_lazy_doc_size(const void *p) {
     return sizeof(FrtLazyDoc);
     (void)p;
 }
