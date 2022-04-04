@@ -4423,14 +4423,6 @@ static void Init_Filter(void) {
  *  larger will cause strange sorting behaviour.
  */
 
-const rb_data_type_t frb_sort_field_const_t = {
-    .wrap_struct_name = "FrbSortFieldConst",
-    .function = {
-        .dfree = frb_deref_free,
-        .dsize = frb_sort_field_size
-    }
-};
-
 static void Init_SortField(void) {
     /* option hash keys for SortField#initialize */
     sym_type = ID2SYM(rb_intern("type"));
@@ -4457,26 +4449,26 @@ static void Init_SortField(void) {
     rb_define_method(cSortField, "to_s", frb_sf_to_s, 0);
 
     rb_define_const(cSortField, "SCORE",
-                    TypedData_Wrap_Struct(cSortField, &frb_sort_field_const_t,
+                    TypedData_Wrap_Struct(cSortField, &frb_sort_field_t,
                                      (FrtSortField *)&FRT_SORT_FIELD_SCORE));
     object_add((FrtSortField *)&FRT_SORT_FIELD_SCORE,
                rb_const_get(cSortField, rb_intern("SCORE")));
 
     rb_define_const(cSortField, "SCORE_REV",
-                    TypedData_Wrap_Struct(cSortField, &frb_sort_field_const_t,
+                    TypedData_Wrap_Struct(cSortField, &frb_sort_field_t,
                                      (FrtSortField *)&FRT_SORT_FIELD_SCORE_REV));
     object_add((FrtSortField *)&FRT_SORT_FIELD_SCORE_REV,
                rb_const_get(cSortField, rb_intern("SCORE_REV")));
 
     rb_define_const(cSortField, "DOC_ID",
-                    TypedData_Wrap_Struct(cSortField, &frb_sort_field_const_t,
+                    TypedData_Wrap_Struct(cSortField, &frb_sort_field_t,
                                      (FrtSortField *)&FRT_SORT_FIELD_DOC));
 
     oSORT_FIELD_DOC = rb_const_get(cSortField, rb_intern("DOC_ID"));
     object_add((FrtSortField *)&FRT_SORT_FIELD_DOC, oSORT_FIELD_DOC);
 
     rb_define_const(cSortField, "DOC_ID_REV",
-                    TypedData_Wrap_Struct(cSortField, &frb_sort_field_const_t,
+                    TypedData_Wrap_Struct(cSortField, &frb_sort_field_t,
                                      (FrtSortField *)&FRT_SORT_FIELD_DOC_REV));
     object_add((FrtSortField *)&FRT_SORT_FIELD_DOC_REV,
                rb_const_get(cSortField, rb_intern("DOC_ID_REV")));
