@@ -5,8 +5,7 @@
 
 extern rb_encoding *utf8_encoding;
 
-static FrtFieldInfos *create_fis()
-{
+static FrtFieldInfos *create_fis(void) {
     FrtFieldInfos *fis = frt_fis_new(FRT_STORE_YES, FRT_INDEX_YES, FRT_TERM_VECTOR_WITH_POSITIONS_OFFSETS);
     return fis;
 }
@@ -19,8 +18,7 @@ static FrtIndexWriter *create_iw(FrtStore *store)
     return frt_iw_open(NULL, store, frt_standard_analyzer_new(true), &frt_default_config);
 }
 
-static FrtDocument *prep_doc()
-{
+static FrtDocument *prep_doc(void) {
     FrtDocument *doc = frt_doc_new();
     rb_encoding *enc = utf8_encoding;
     frt_doc_add_field(

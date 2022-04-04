@@ -280,8 +280,7 @@ static void append_to_msg_buf(const char *fmt, ...)
 }
 
 
-static void Tstack()
-{
+static void Tstack(void) {
     if (show_stack) {
         char *stack = frt_get_stacktrace();
         if (stack) {

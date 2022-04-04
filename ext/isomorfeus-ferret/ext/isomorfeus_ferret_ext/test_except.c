@@ -5,8 +5,7 @@
 static const char *msg1 = "Message One";
 static const char *msg2 = "Message Two";
 
-static void raise_exception()
-{
+static void raise_exception(void) {
     FRT_RAISE(FRT_EXCEPTION, "%s", msg1);
 }
 
