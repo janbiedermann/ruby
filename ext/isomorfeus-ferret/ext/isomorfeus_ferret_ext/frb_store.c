@@ -187,7 +187,7 @@ frb_lock_release(VALUE self)
  *
  ****************************************************************************/
 
-void frb_dir_free(void *) {
+void frb_dir_free(void *p) {
     FrtStore *store = (FrtStore *)p;
     frb_unwrap_locks(store);
     object_del(store);
