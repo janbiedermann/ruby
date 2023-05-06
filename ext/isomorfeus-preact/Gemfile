@@ -1,0 +1,13 @@
+source 'https://rubygems.org'
+git_source(:github) { |repo| "https://github.com/#{repo}.git" }
+
+gem 'isomorfeus-redux', path: '../../../isomorfeus/isomorfeus-project/isomorfeus-redux'
+gem 'isomorfeus', path: '../../../isomorfeus/isomorfeus-project/isomorfeus'
+gem 'isomorfeus-data', path: '../../../isomorfeus/isomorfeus-project/isomorfeus-data'
+gem 'isomorfeus-empowerment', path: '../../../isomorfeus/isomorfeus-project/isomorfeus-empowerment'
+gem 'isomorfeus-i18n', path: '../../../isomorfeus/isomorfeus-project/isomorfeus-i18n'
+gem 'isomorfeus-mailer', path: '../../../isomorfeus/isomorfeus-project/isomorfeus-mailer'
+gem 'isomorfeus-operation', path: '../../../isomorfeus/isomorfeus-project/isomorfeus-operation'
+gem 'isomorfeus-policy', path: '../../../isomorfeus/isomorfeus-project/isomorfeus-policy'
+gem 'isomorfeus-transport', path: '../../../isomorfeus/isomorfeus-project/isomorfeus-transport'
+gemspec

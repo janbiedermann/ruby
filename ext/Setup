@@ -20,6 +20,7 @@
 #io/console
 #io/nonblock
 #io/wait
+isomorfeus-preact
 #json
 #json/generator
 #json/parser

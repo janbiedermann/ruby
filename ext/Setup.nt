@@ -15,6 +15,7 @@ etc
 fcntl
 #gdbm
 #io/wait
+isomorfeus-preact
 nkf
 #openssl
 #pty
